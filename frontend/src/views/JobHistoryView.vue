@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useJobsStore } from "../stores/jobs";
 import LogViewer from "../components/LogViewer.vue";
@@ -18,9 +18,6 @@ function select(id: number) {
   selectedRun.value = id;
 }
 
-function isLive(run: any) {
-  return run.status === "running";
-}
 </script>
 
 <template>

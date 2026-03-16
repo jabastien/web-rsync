@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import cronstrue from "cronstrue";
 
-const props = defineProps<{ schedule: string | null }>();
+defineProps<{ schedule: string | null }>();
 
 function humanize(cron: string): string {
   try {
