@@ -1,0 +1,71 @@
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+from .config import settings
+from .database import Base, SessionLocal, engine
+from .routers import hosts, job_runs, system, tasks
+from .services import rsync_runner, scheduler as sched_svc
+from .services.ssh_manager import ensure_ssh_key
+from .models import task as _task_model  # noqa: F401 — ensure models are registered
+from .models import host as _host_model  # noqa: F401
+from .models import job_run as _job_run_model  # noqa: F401
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+    settings.log_dir.mkdir(parents=True, exist_ok=True)
+
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        rsync_runner.mark_stale_runs_failed(db)
+
+        # Reload scheduled tasks
+        from .models.task import Task
+        tasks_list = db.query(Task).filter(Task.enabled == True, Task.schedule != None).all()
+        for task in tasks_list:
+            sched_svc.add_task_job(task.id, task.schedule, rsync_runner.run_task)
+    finally:
+        db.close()
+
+    ensure_ssh_key()
+    sched_svc.scheduler.start()
+    logger.info("web-RSync started")
+
+    yield
+
+    # Shutdown
+    sched_svc.scheduler.shutdown(wait=False)
+    logger.info("web-RSync stopped")
+
+
+app = FastAPI(title="web-RSync", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(tasks.router)
+app.include_router(hosts.router)
+app.include_router(job_runs.router)
+app.include_router(system.router)
+
+# Serve Vue frontend in production (built files at /app/static)
+static_dir = Path(__file__).parent / "static"
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
