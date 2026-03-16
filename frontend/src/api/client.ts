@@ -13,6 +13,8 @@ export const toggleTask = (id: number, enabled: boolean) =>
 export const runTask = (id: number) => api.post(`/tasks/${id}/run`);
 export const dryRunTask = (id: number) => api.post(`/tasks/${id}/dry-run`);
 export const cloneTask = (id: number) => api.post(`/tasks/${id}/clone`);
+export const previewTask = (data: { source_path: string; dest_path: string; rsync_options: string }) =>
+  api.post("/tasks/preview", data);
 
 // ---- Hosts ----
 export const getHosts = () => api.get("/hosts");

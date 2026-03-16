@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive, ref, nextTick, onUnmounted } from "vue";
 import cronstrue from "cronstrue";
+import { previewTask } from "../api/client";
 
 interface FormData {
   name: string;
@@ -23,6 +24,7 @@ const form = reactive<FormData>({
   enabled: props.initial?.enabled ?? true,
 });
 
+// ── Flag reference panel ──────────────────────────────────────────────────────
 const showFlags = ref(false);
 
 const FLAG_GROUPS: { group: string; flags: { flag: string; desc: string }[] }[] = [
@@ -137,6 +139,79 @@ function appendFlag(flag: string) {
   }
 }
 
+// ── Dry-run preview ───────────────────────────────────────────────────────────
+const previewRunId = ref<number | null>(null);
+const previewRunning = ref(false);
+const previewDone = ref(false);
+const previewStatus = ref<"success" | "failed" | null>(null);
+const previewLines = ref<string[]>([]);
+const logContainer = ref<HTMLElement | null>(null);
+let previewEs: EventSource | null = null;
+
+function clearPreview() {
+  previewEs?.close();
+  previewEs = null;
+  previewRunId.value = null;
+  previewRunning.value = false;
+  previewDone.value = false;
+  previewStatus.value = null;
+  previewLines.value = [];
+}
+
+async function runPreview() {
+  if (!form.source_path || !form.dest_path) return;
+  clearPreview();
+  previewRunning.value = true;
+
+  try {
+    const res = await previewTask({
+      source_path: form.source_path,
+      dest_path: form.dest_path,
+      rsync_options: form.rsync_options,
+    });
+    previewRunId.value = res.data.run_id;
+    streamPreview(res.data.run_id);
+  } catch (e: any) {
+    previewLines.value = [`[ERROR] ${e.response?.data?.detail ?? e.message}`];
+    previewRunning.value = false;
+    previewDone.value = true;
+    previewStatus.value = "failed";
+  }
+}
+
+function streamPreview(runId: number) {
+  previewEs = new EventSource(`/api/job-runs/${runId}/stream`);
+
+  previewEs.onmessage = (e) => {
+    previewLines.value.push(e.data);
+    nextTick(() => {
+      if (logContainer.value)
+        logContainer.value.scrollTop = logContainer.value.scrollHeight;
+    });
+  };
+
+  previewEs.addEventListener("done", (e: any) => {
+    previewStatus.value = e.data === "success" ? "success" : "failed";
+    previewLines.value.push(`\n─── ${previewStatus.value.toUpperCase()} ───`);
+    previewRunning.value = false;
+    previewDone.value = true;
+    previewEs?.close();
+    nextTick(() => {
+      if (logContainer.value)
+        logContainer.value.scrollTop = logContainer.value.scrollHeight;
+    });
+  });
+
+  previewEs.onerror = () => {
+    previewRunning.value = false;
+    previewDone.value = true;
+    previewEs?.close();
+  };
+}
+
+onUnmounted(() => previewEs?.close());
+
+// ── Cron hint ─────────────────────────────────────────────────────────────────
 function cronHint(cron: string): string {
   if (!cron) return "";
   try {
@@ -196,6 +271,47 @@ function submit() {
       </div>
     </div>
 
+    <!-- Dry-run preview -->
+    <div class="preview-section">
+      <div class="preview-header">
+        <span class="preview-title">Dry-Run Test</span>
+        <button
+          type="button"
+          class="btn-preview"
+          :disabled="previewRunning || !form.source_path || !form.dest_path"
+          @click="runPreview"
+        >
+          <span v-if="previewRunning" class="spinner" />
+          {{ previewRunning ? "Running…" : "▶ Test Dry Run" }}
+        </button>
+        <button
+          v-if="previewDone"
+          type="button"
+          class="btn-clear"
+          @click="clearPreview"
+        >✕ Clear</button>
+        <span
+          v-if="previewDone"
+          class="preview-badge"
+          :class="previewStatus === 'success' ? 'badge-ok' : 'badge-err'"
+        >
+          {{ previewStatus === "success" ? "✓ OK" : "✗ Failed" }}
+        </span>
+      </div>
+      <div class="preview-hint">
+        Runs rsync <code>--dry-run</code> with the current paths and options — no files will be transferred.
+      </div>
+
+      <div
+        v-if="previewRunning || previewLines.length"
+        class="preview-log"
+        ref="logContainer"
+      >
+        <pre v-if="previewLines.length === 0" class="log-waiting">Waiting for output…</pre>
+        <pre v-for="(line, i) in previewLines" :key="i">{{ line }}</pre>
+      </div>
+    </div>
+
     <div class="form-group">
       <label>Schedule (cron)</label>
       <input v-model="form.schedule" placeholder="0 2 * * * — leave blank for manual" />
@@ -212,6 +328,7 @@ function submit() {
 </template>
 
 <style scoped>
+/* ── Flag reference ── */
 .flag-toggle {
   background: none;
   border: none;
@@ -233,12 +350,8 @@ function submit() {
   overflow-y: auto;
 }
 
-.flag-group {
-  margin-bottom: 14px;
-}
-.flag-group:last-child {
-  margin-bottom: 0;
-}
+.flag-group { margin-bottom: 14px; }
+.flag-group:last-child { margin-bottom: 0; }
 
 .flag-group-title {
   font-size: 11px;
@@ -249,11 +362,7 @@ function submit() {
   margin-bottom: 6px;
 }
 
-.flag-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
+.flag-grid { display: flex; flex-direction: column; gap: 3px; }
 
 .flag-chip {
   display: flex;
@@ -268,11 +377,7 @@ function submit() {
   transition: background 0.1s, border-color 0.1s;
   width: 100%;
 }
-.flag-chip:hover {
-  background: #eff6ff;
-  border-color: #93c5fd;
-}
-
+.flag-chip:hover { background: #eff6ff; border-color: #93c5fd; }
 .flag-chip code {
   font-family: "Fira Code", "Cascadia Code", monospace;
   font-size: 12px;
@@ -280,9 +385,104 @@ function submit() {
   white-space: nowrap;
   min-width: 160px;
 }
+.flag-desc { font-size: 12px; color: #6b7280; }
 
-.flag-desc {
-  font-size: 12px;
-  color: #6b7280;
+/* ── Dry-run preview ── */
+.preview-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: #f9fafb;
 }
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.preview-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
+}
+
+.btn-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-preview:hover:not(:disabled) { background: #0d6460; }
+.btn-preview:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-clear {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.btn-clear:hover { color: #374151; }
+
+.preview-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+.badge-ok  { background: #dcfce7; color: #166534; }
+.badge-err { background: #fee2e2; color: #991b1b; }
+
+.preview-hint {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+.preview-hint code {
+  font-family: monospace;
+  background: #e5e7eb;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.preview-log {
+  background: #0f172a;
+  color: #94a3b8;
+  font-family: "Fira Code", "Cascadia Code", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  border-radius: 5px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.preview-log pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.log-waiting { color: #475569; font-style: italic; }
+
+/* ── Spinner ── */
+.spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

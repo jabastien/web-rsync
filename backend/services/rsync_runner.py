@@ -142,6 +142,45 @@ async def _execute(cmd: list[str], log_path: Path, run_id: int) -> int:
     return exit_code
 
 
+async def run_preview(source_path: str, dest_path: str, rsync_options: str) -> int:
+    """Ephemeral dry-run with arbitrary paths/options — no saved task required.
+
+    Creates the JobRun record synchronously and returns run_id immediately.
+    Rsync executes as a background task so the caller can stream SSE right away.
+    """
+    db: Session = SessionLocal()
+    try:
+        settings.log_dir.mkdir(parents=True, exist_ok=True)
+        job_run = JobRun(task_id=None, trigger="dry_run", status="running", log_path="")
+        db.add(job_run)
+        db.flush()
+        log_path = settings.log_dir / f"{job_run.id}.log"
+        job_run.log_path = str(log_path)
+        db.commit()
+        run_id = job_run.id
+    finally:
+        db.close()
+
+    options = shlex.split(rsync_options)
+    if "--dry-run" not in options and "-n" not in options:
+        options = ["--dry-run"] + options
+    if "-v" not in options and "--verbose" not in options:
+        options = ["-v"] + options
+    ssh_key = settings.ssh_dir / "id_rsa"
+    if ssh_key.exists():
+        options += ["-e", f"ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new"]
+    cmd = ["rsync"] + options + [source_path, dest_path]
+
+    logger.info("Starting preview dry-run %d: %s", run_id, cmd)
+    asyncio.create_task(_execute_semaphored(cmd, log_path, run_id))
+    return run_id
+
+
+async def _execute_semaphored(cmd: list[str], log_path: Path, run_id: int) -> None:
+    async with get_semaphore():
+        await _execute(cmd, log_path, run_id)
+
+
 def mark_stale_runs_failed(db: Session):
     stale = db.query(JobRun).filter(JobRun.status == "running").all()
     for run in stale:

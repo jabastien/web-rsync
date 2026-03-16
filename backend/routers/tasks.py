@@ -1,11 +1,18 @@
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models.task import Task
 from ..schemas.task import TaskCreate, TaskRead, TaskUpdate
 from ..services import rsync_runner, scheduler as sched_svc
+
+
+class PreviewRequest(BaseModel):
+    source_path: str
+    dest_path: str
+    rsync_options: str = "-avz"
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -32,6 +39,15 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
     db.refresh(task)
     _sync_scheduler(task)
     return task
+
+
+@router.post("/preview")
+async def preview_task(payload: PreviewRequest):
+    """Ephemeral dry-run with form values — no saved task required."""
+    run_id = await rsync_runner.run_preview(
+        payload.source_path, payload.dest_path, payload.rsync_options
+    )
+    return {"run_id": run_id}
 
 
 @router.get("/{task_id}", response_model=TaskRead)

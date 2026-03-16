@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class JobRunRead(BaseModel):
     id: int
-    task_id: int
+    task_id: int | None
     trigger: str
     started_at: datetime
     finished_at: datetime | None
