@@ -4,9 +4,9 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 
 ## Architecture
 
-[![Architecture Diagram](https://excalidraw.com/#json=mKW86ats1cRJ2BhHcpiDX,i4a_t0kmqaxNfUV-U2vFCg)](https://excalidraw.com/#json=mKW86ats1cRJ2BhHcpiDX,i4a_t0kmqaxNfUV-U2vFCg)
+![Architecture Diagram](docs/architecture.png)
 
-> [Open in Excalidraw](https://excalidraw.com/#json=mKW86ats1cRJ2BhHcpiDX,i4a_t0kmqaxNfUV-U2vFCg)
+> [Open in Excalidraw](https://excalidraw.com/#json=qptvNRHEOhVo4dtsWBhtq,BdGljb7rRpciXu4Sf5ynag)
 
 ---
 
