@@ -2,6 +2,14 @@
 
 A web UI for managing rsync tasks — replacement for the unmaintained [websync](https://github.com/jabastien/websync) project.
 
+## Architecture
+
+[![Architecture Diagram](https://excalidraw.com/#json=mKW86ats1cRJ2BhHcpiDX,i4a_t0kmqaxNfUV-U2vFCg)](https://excalidraw.com/#json=mKW86ats1cRJ2BhHcpiDX,i4a_t0kmqaxNfUV-U2vFCg)
+
+> [Open in Excalidraw](https://excalidraw.com/#json=mKW86ats1cRJ2BhHcpiDX,i4a_t0kmqaxNfUV-U2vFCg)
+
+---
+
 ## Features
 
 - Create, schedule, and run rsync tasks via a web UI
