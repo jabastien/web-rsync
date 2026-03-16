@@ -44,12 +44,12 @@ web-RSync/
 │   │   ├── host.py
 │   │   └── job_run.py
 │   ├── routers/
-│   │   ├── tasks.py              # CRUD + /run + /dry-run + /clone
+│   │   ├── tasks.py              # CRUD + /run + /dry-run + /clone + /preview
 │   │   ├── hosts.py              # CRUD + /deploy-key + /ssh-keys
 │   │   ├── job_runs.py           # list + detail + /log + /stream (SSE)
-│   │   └── system.py            # /health + /scheduler-jobs
+│   │   └── system.py             # /health + /scheduler-jobs
 │   └── services/
-│       ├── rsync_runner.py       # async subprocess, log file, JobRun lifecycle
+│       ├── rsync_runner.py       # async subprocess, log file, JobRun lifecycle, preview
 │       ├── scheduler.py          # APScheduler init, job sync with DB
 │       └── ssh_manager.py        # key gen on startup, key listing, paramiko deploy
 ├── frontend/
@@ -63,7 +63,7 @@ web-RSync/
 │   │   ├── stores/               # tasks.ts, hosts.ts, jobs.ts (Pinia)
 │   │   ├── api/client.ts         # Axios wrapper
 │   │   ├── components/
-│   │   │   ├── TaskForm.vue
+│   │   │   ├── TaskForm.vue      # includes flag reference panel + dry-run preview
 │   │   │   ├── HostForm.vue
 │   │   │   ├── LogViewer.vue     # SSE client, auto-scroll
 │   │   │   └── ScheduleBadge.vue
@@ -93,7 +93,7 @@ web-RSync/
 - `ssh_key_path: str | None` — filesystem path only, no key material in DB
 
 ### JobRun
-- `id`, `task_id` (FK), `trigger` ("manual" | "scheduled" | "dry_run")
+- `id`, `task_id: int | None` (FK, nullable for preview runs), `trigger` ("manual" | "scheduled" | "dry_run")
 - `started_at`, `finished_at`, `exit_code`, `status` ("running" | "success" | "failed" | "cancelled")
 - `log_path: str` — path to `data/logs/<id>.log` file (not stored as BLOB)
 
@@ -101,7 +101,7 @@ web-RSync/
 
 ## API Endpoints
 
-**Tasks:** CRUD at `/api/tasks`, plus `POST /{id}/run`, `POST /{id}/dry-run`, `POST /{id}/clone`, `PATCH /{id}/enabled`
+**Tasks:** CRUD at `/api/tasks`, plus `POST /{id}/run`, `POST /{id}/dry-run`, `POST /{id}/clone`, `PATCH /{id}/enabled`, `POST /preview`
 
 **Hosts:** CRUD at `/api/hosts`, plus `POST /{id}/deploy-key`, `GET /ssh-keys`
 
@@ -124,6 +124,8 @@ web-RSync/
 **Scheduler synced on every CRUD op** — no polling loop; `add_job`/`remove_job` called in the same request handler that modifies a task.
 
 **asyncio.Semaphore for concurrency** — configurable `MAX_CONCURRENT_JOBS` (default 3), no Redis/Celery needed.
+
+**Preview runs use nullable task_id** — ephemeral dry-runs (from the task form before saving) create a JobRun with `task_id=NULL`. This reuses the existing SSE streaming infrastructure without requiring a saved task. The `run_preview` function creates the DB record synchronously (so `run_id` is available immediately for SSE), then fires rsync as a background asyncio task.
 
 ---
 
@@ -176,6 +178,22 @@ web-RSync/
 - `docker-compose.yml` with volume mount for `./data:/data`
 - Test data persistence across container restart
 
+### Phase 7 — Task Form UX Enhancements ✓
+
+#### rsync Flag Reference Panel
+- Collapsible panel toggled by "Browse flags ▾" link below the rsync options input
+- ~60 flags organized into 8 groups: Common, Sync Behaviour, File Selection, Permissions & Ownership, Links & Special Files, SSH/Network, Checksums & Integrity, Output & Logging
+- Each flag is a clickable chip — appends flag to the options input (skips duplicates)
+- Hover shows full description; panel scrolls independently at max 420px height
+
+#### Inline Dry-Run Preview
+- **▶ Test Dry Run** button in the task form — works before the task is saved
+- Posts `{source_path, dest_path, rsync_options}` to `POST /api/tasks/preview`
+- Backend creates a `JobRun` record with `task_id=NULL`, fires rsync `--dry-run -v` as a background asyncio task, returns `run_id` synchronously
+- Frontend opens SSE stream to `/api/job-runs/{run_id}/stream`, streams output into an inline dark log panel with auto-scroll
+- Spinner while running; `✓ OK` / `✗ Failed` badge on completion; **✕ Clear** to reset
+- `JobRun.task_id` made nullable to support these ephemeral preview runs
+
 ---
 
 ## Backend Dependencies (pyproject.toml)
@@ -192,4 +210,5 @@ web-RSync/
 2. `POST /api/tasks` + `POST /api/tasks/{id}/run` → log file appears in `data/logs/`, SSE stream delivers lines
 3. Create a task with a cron schedule → check `/api/system/scheduler-jobs` → job listed
 4. `POST /api/hosts/{id}/deploy-key` → passwordless SSH to test host works
-5. `docker compose up` → UI loads at `http://localhost:8000`, create + run a task end-to-end
+5. `POST /api/tasks/preview` with `{source_path, dest_path, rsync_options}` → returns `run_id`, log file created, status `success`
+6. `docker compose up` → UI loads at `http://localhost:8000`, create + run a task end-to-end
