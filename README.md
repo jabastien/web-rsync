@@ -181,6 +181,11 @@ web-RSync server  →ssh -A→  source host  →rsync→  destination host
 | Checksum-based comparison | `-avz --checksum` | Compares by file content instead of mtime+size — slower but reliable after a restore or when clocks differ between hosts |
 | Skip large files | `-avz --max-size=500m` | Avoid accidentally syncing large ISOs or VM disk images; supports `k`, `m`, `g` suffixes |
 | Exclude temp / cache | `-avz --exclude='*.tmp' --exclude='*.log'` | Chain as many `--exclude` flags as needed |
+| Include only one file type | `-avz --include='*/' --include='*.conf' --exclude='*'` | Recursively sync only `.conf` files. `--include='*/'` is required so rsync descends into directories; the final `--exclude='*'` rejects everything not already included. Useful for config-only backups across many service directories |
+| Set destination permissions | `-avz --chmod=D755,F644` | Override permissions at the destination regardless of source. `D` = directories, `F` = files. Useful when syncing media to a NAS where Jellyfin or Plex requires specific read permissions, or when source and destination users differ |
+| Only recent files (hot backup) | `-avz --max-age=7` | Transfer only files modified in the last 7 days. Ideal for frequent incremental jobs that capture recent activity without re-syncing a large unchanged archive. Value is in days |
+| Archive old files only | `-avz --min-age=90` | Transfer only files not modified in 90+ days. Useful for tiering cold data to a NAS or off-site target. Combine with `--remove-source-files` to implement a move-to-archive pattern |
+| Protect files from --delete | `-avz --delete --filter='protect .env'` | Mirror with deletion but shield specific files from being removed at the destination. The `protect` filter rule prevents rsync from deleting a matching file even if it is absent from the source. Chain multiple: `--filter='protect *.env' --filter='protect *.secret'` |
 | Resumable over unreliable links | `-avz --partial` | Keeps partially transferred files so the next run resumes from where it stopped |
 | Live progress (large transfers) | `-avz --info=progress2` | Compact single-line progress — cleaner than `-v` for thousands of files |
 

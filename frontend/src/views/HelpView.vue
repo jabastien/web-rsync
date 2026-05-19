@@ -154,6 +154,55 @@
             <td>Chain as many <code>--exclude</code> flags as needed; patterns are matched against the relative path</td>
           </tr>
           <tr>
+            <td>Include only one file type</td>
+            <td><code>-avz --include='*/' --include='*.conf' --exclude='*'</code></td>
+            <td>
+              Recursively sync only <code>.conf</code> files. The <code>--include='*/'</code> is required so rsync descends into
+              subdirectories — without it, all directories are excluded before their contents are evaluated.
+              The final <code>--exclude='*'</code> rejects everything not already included.
+              Useful for config-only backups across many service directories.
+            </td>
+          </tr>
+          <tr>
+            <td>Set destination permissions</td>
+            <td><code>-avz --chmod=D755,F644</code></td>
+            <td>
+              Override permissions at the destination regardless of what the source has.
+              <code>D</code> applies to directories, <code>F</code> to files.
+              Useful when syncing media to a NAS where Jellyfin or Plex requires specific read permissions,
+              or when source files are owned by a different user than the destination.
+            </td>
+          </tr>
+          <tr>
+            <td>Only recent files (hot backup)</td>
+            <td><code>-avz --max-age=7</code></td>
+            <td>
+              Transfer only files modified within the last 7 days. Ideal for a frequent incremental job that
+              captures recent activity without re-syncing a large unchanged archive.
+              Value is in days; fractional days are not supported.
+            </td>
+          </tr>
+          <tr>
+            <td>Archive old files only</td>
+            <td><code>-avz --min-age=90</code></td>
+            <td>
+              Transfer only files not modified in 90+ days. Useful for tiering cold data to long-term
+              storage on a NAS or off-site target. Combine with <code>--remove-source-files</code>
+              to implement a move-to-archive pattern (files are deleted from source after transfer).
+            </td>
+          </tr>
+          <tr>
+            <td>Protect files from --delete</td>
+            <td><code>-avz --delete --filter='protect .env'</code></td>
+            <td>
+              Mirror with deletion but shield specific files from being removed at the destination.
+              <code>protect</code> is a <code>--filter</code> rule type that prevents rsync from deleting
+              a matching file even if it does not exist at the source.
+              Useful when <code>.env</code> or local config files exist only on the server side and must survive a sync.
+              Multiple rules: <code>--filter='protect *.env' --filter='protect *.secret'</code>.
+            </td>
+          </tr>
+          <tr>
             <td>Resumable over unreliable links</td>
             <td><code>-avz --partial</code></td>
             <td>Keeps partially transferred files so the next run continues from where it stopped — useful for large files over VPN or WAN</td>
