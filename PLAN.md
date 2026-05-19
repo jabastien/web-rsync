@@ -202,6 +202,27 @@ web-RSync/
 ## Frontend Dependencies (package.json)
 `vue`, `vue-router`, `pinia`, `axios`, `vite`, `@vitejs/plugin-vue`, `typescript`, `vue-tsc`, `cronstrue`
 
+### Phase 8 — Code Review Fixes ✓
+
+**Critical bugs:**
+- `/run` and `/dry-run` now create `JobRun` synchronously and return `run_id` immediately; rsync fires as a background asyncio task. Previously `asyncio.create_task()` returned an asyncio Task object, never the integer `run_id`.
+- `stream_log` SSE: added `db.expire(run)` before each status check — SQLAlchemy identity map was caching the initial `status="running"` forever, so the `done` event never fired.
+- `update_task` changed from `exclude_none=True` to `exclude_unset=True` so `PUT` with `schedule: null` actually clears the schedule.
+
+**Security:**
+- `ssh_manager`: `AutoAddPolicy` → `WarningPolicy` (MITM note in comment).
+- `deploy_key` rewritten to use SFTP instead of `exec_command` + `echo` — eliminates shell quoting entirely.
+
+**Code quality:**
+- `run_task`/`run_dry` unified via shared `_start_run` + `_build_rsync_cmd(dry_run=)`, removing ~40 lines of duplication.
+- `log_path` removed from `JobRunRead` response schema and frontend interface (leaked filesystem paths; not used in UI).
+- Frontend: Run/Dry redirect to `/history/:run_id` so the live log auto-selects.
+- `cors_origins` default trimmed to dev-only `[:5173]`.
+- `run.sh` env loading switched to `set -a; source .env; set +a` (robust multiline/quoted values).
+
+**Deployment:**
+- Deployed at `/docker/web-rsync/` via container-commit workaround (AppArmor blocks `docker build` in this Proxmox LXC). `rebuild.sh` automates re-deploys. `security_opt: apparmor=unconfined` added to compose for runtime.
+
 ---
 
 ## Verification

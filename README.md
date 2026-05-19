@@ -51,11 +51,20 @@ npm run dev       # http://localhost:5173 — proxies /api to :8000
 
 ## Docker (production)
 
+Deployed at `/docker/web-rsync/` with a persistent data volume:
+
 ```bash
-docker compose up --build
+# First deploy (or after code changes)
+/docker/web-rsync/rebuild.sh
+
+# Start / stop / restart
+docker compose -f /docker/web-rsync/docker-compose.yml up -d
+docker compose -f /docker/web-rsync/docker-compose.yml down
 ```
 
 UI and API both served at `http://localhost:8000`. The Vue frontend is built into the container and served as static files by FastAPI.
+
+> **Note — Proxmox LXC:** `docker compose up --build` fails on this host due to AppArmor restrictions in LXC containers. `rebuild.sh` works around this by building via container commit. To enable normal builds, add `lxc.apparmor.profile = unconfined` to the LXC config on the Proxmox host and restart the container.
 
 ---
 
