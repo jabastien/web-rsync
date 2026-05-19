@@ -1,10 +1,19 @@
+<script setup lang="ts">
+declare const __APP_VERSION__: string;
+const version = __APP_VERSION__;
+</script>
+
 <template>
   <nav class="sidebar">
     <div class="sidebar-brand">web-RSync</div>
-    <RouterLink to="/">Dashboard</RouterLink>
-    <RouterLink to="/tasks">Tasks</RouterLink>
-    <RouterLink to="/hosts">Hosts</RouterLink>
-    <RouterLink to="/history">History</RouterLink>
+    <div class="sidebar-nav">
+      <RouterLink to="/">Dashboard</RouterLink>
+      <RouterLink to="/tasks">Tasks</RouterLink>
+      <RouterLink to="/hosts">Hosts</RouterLink>
+      <RouterLink to="/history">History</RouterLink>
+      <RouterLink to="/help">Help</RouterLink>
+    </div>
+    <div class="sidebar-footer">v{{ version }}</div>
   </nav>
   <RouterView />
 </template>
@@ -26,6 +35,9 @@
   padding: 0 16px 20px;
   letter-spacing: 0.03em;
 }
+.sidebar-nav {
+  flex: 1;
+}
 .sidebar a {
   display: block;
   padding: 10px 16px;
@@ -38,5 +50,12 @@
 .sidebar a:hover, .sidebar a.router-link-active {
   background: #334155;
   color: #f1f5f9;
+}
+.sidebar-footer {
+  padding: 12px 16px 4px;
+  font-size: 11px;
+  color: #475569;
+  border-top: 1px solid #334155;
+  margin-top: 8px;
 }
 </style>
