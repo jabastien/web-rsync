@@ -225,6 +225,36 @@ web-RSync/
 
 ---
 
+### Phase 9 — UX Hardening, Feature Additions & Bug Fixes ✓
+
+#### UI Improvements
+- **Table layout**: Tasks and Hosts tables use two rows per item — data row + actions row spanning full width — eliminating horizontal scroll. Path/hostname cells truncate with CSS ellipsis. Column widths controlled by `<colgroup>`.
+- **Path tooltip**: Hovering a truncated path cell in TasksView shows a dark monospace tooltip with the full path. Only shown when `el.scrollWidth > el.clientWidth`. Rendered via `<Teleport to="body">` to avoid table overflow clipping.
+- **Confirmation modal**: `ConfirmModal.vue` reusable component — shown before deleting any task or host, and before purging history. Displays item name and count.
+- **Deploy Key modal**: Success swaps modal content to a green checkmark state instead of `alert()`. Error renders inline.
+- **Help view**: `/help` route covering path formats, Remote→Remote, rsync options (common + 15 homelab scenarios), Hosts, Job History. All "local" references clarified as "server/container filesystem" with docker-compose volume mount example.
+- **Sidebar version badge**: `v<version>` at the bottom, injected at build time via Vite `define` from `package.json`.
+- **crontab.guru** link added to schedule field hint, Help view, and README.
+
+#### Task Features
+- **Exclude / Include pattern fields**: `exclude_patterns` and `include_patterns` text columns on `Task` (newline-separated). Inline SQLite migration on startup. Backend writes `data/patterns/{task_id}_{exclude,include}.txt` before each run; injects `--include-from` then `--exclude-from`. Preview and clone both propagate the fields. Frontend: two side-by-side monospace textareas in `TaskForm`.
+
+#### Remote → Remote SSH ✓
+- `_build_cmd()` detects dual-remote paths and runs `ssh -A source_host "rsync … dest_path"` — agent forwarding lets the source authenticate to destination without the private key leaving the server.
+- `ensure_ssh_agent()` / `stop_ssh_agent()` manage an `ssh-agent` process and load the server key on startup/shutdown.
+- `run_preview` updated to use shared `_build_cmd()` (previously bypassed remote→remote logic).
+
+#### Job History
+- **Purge history**: `DELETE /api/job-runs` deletes all completed runs and log files; `running` runs are skipped. Frontend: Purge button (disabled when nothing to purge) guarded by `ConfirmModal` with exact count.
+- **Live log race condition fixed**: `LogViewer` was mounting before `store.fetchAll()` resolved → `live` prop always `false` → `loadStatic()` instead of `startStream()`. Fix: `await fetchAll()` before rendering, `loaded` flag gates the `LogViewer` render.
+- **Status polling**: `JobHistoryView` polls `fetchAll()` every 3 s while any run is `running`, stops automatically. `LogViewer` emits `done` on SSE close; parent refreshes store immediately. Status badge shown inline in log panel header.
+
+#### Infrastructure
+- **SPA deep-link fix**: Replaced `StaticFiles(html=True)` at `/` (which only fell back to `index.html` for `/`) with `/assets` static mount + `/{full_path:path}` catch-all returning `index.html`. Direct access to `/history/42`, `/tasks`, `/help` etc. now works.
+- **docker-compose example** with volume mount guidance added to README.
+
+---
+
 ## Verification
 
 1. `./run.sh` — starts uvicorn; hit `GET /api/system/health` → `{"status": "ok"}`

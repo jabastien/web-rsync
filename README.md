@@ -15,10 +15,15 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 - Create, schedule, and run rsync tasks via a web UI
 - **Inline dry-run test** — validate paths and options before saving, with live log output
 - **rsync flag reference** — searchable flag panel with ~60 flags; click to append to options
-- Real-time log streaming over SSE (Server-Sent Events)
+- **Exclude / include pattern editor** — per-task `--exclude-from` and `--include-from` pattern lists, managed as text fields (no manual file editing)
+- **Remote → Remote sync** — both paths as `user@host:/path`; web-RSync SSHes into the source and forwards its agent so rsync authenticates to the destination without the private key leaving the server
+- Real-time log streaming over SSE (Server-Sent Events); status badges update live, no reload required
 - SSH host management with automated public-key deployment
-- Cron scheduling with human-readable previews
-- Job run history with full per-run logs
+- Cron scheduling with human-readable previews ([crontab.guru](https://crontab.guru/) linked)
+- Job run history with full per-run logs; **purge history** with confirmation
+- Confirmation modal on all destructive actions (delete task, delete host, purge history)
+- In-app **Help** page covering all features, path formats, and homelab rsync recipes
+- Version badge in sidebar; SPA deep-links (`/history/42`, `/tasks`, etc.) work on direct access / refresh
 
 ## Stack
 
@@ -65,6 +70,28 @@ docker compose -f /docker/web-rsync/docker-compose.yml down
 UI and API both served at `http://localhost:8000`. The Vue frontend is built into the container and served as static files by FastAPI.
 
 > **Note — Proxmox LXC:** `docker compose up --build` fails on this host due to AppArmor restrictions in LXC containers. `rebuild.sh` works around this by building via container commit. To enable normal builds, add `lxc.apparmor.profile = unconfined` to the LXC config on the Proxmox host and restart the container.
+
+### docker-compose.yml example
+
+```yaml
+services:
+  web-rsync:
+    image: web-rsync:latest
+    container_name: web-rsync
+    ports:
+      - "8000:8000"       # UI + API
+    volumes:
+      - ./data:/data       # DB, SSH keys, logs — must be persistent
+      - /mnt/nas:/mnt/nas  # expose host paths for rsync tasks (add as needed)
+    environment:
+      - DATA_DIR=/data
+      - MAX_CONCURRENT_JOBS=3
+    security_opt:
+      - apparmor=unconfined   # required on Proxmox LXC
+    restart: unless-stopped
+```
+
+> Any host directory used in a task's source or destination path must be mounted into the container. `./data` is the minimum required volume. Add further mounts for each path rsync needs to reach on the host filesystem.
 
 ---
 
@@ -114,10 +141,12 @@ A **Task** defines one rsync job: source, destination, options, and an optional 
    - **Name** — a unique label for this task
    - **Source Path** — path on the web-RSync server (`/mnt/nas/source/`) or remote SSH path (`user@host:/path/`). Not your browser's machine.
    - **Destination Path** — same format; both sides can be remote (see [Remote → Remote](#remote--remote-ssh--ssh))
-   - **rsync Options** — raw flags passed directly to rsync (default: `-avz`). Use the **Browse flags** panel to explore available options.
-   - **Schedule** — optional cron expression (e.g. `0 2 * * *` = every day at 02:00). Leave blank for manual-only. A human-readable translation appears as you type.
+   - **rsync Options** — raw flags passed directly to rsync (default: `-avz`). Use the **Browse flags** panel to explore available options. The field is not shell-processed — `$(date +%F)` will not expand.
+   - **Include Patterns** (`--include-from`) — one pattern per line; included before excludes are evaluated
+   - **Exclude Patterns** (`--exclude-from`) — one pattern per line; e.g. `*.tmp`, `node_modules/`
+   - **Schedule** — optional cron expression (e.g. `0 2 * * *` = every day at 02:00). Leave blank for manual-only. A human-readable translation appears as you type. See [crontab.guru](https://crontab.guru/).
    - **Enabled** — uncheck to disable without deleting
-3. Use **▶ Test Dry Run** to validate your paths and options before saving. This runs rsync with `--dry-run` immediately and streams the output inline — no files are transferred and the task does not need to be saved first.
+3. Use **▶ Test Dry Run** to validate your paths, options, and patterns before saving. This runs rsync with `--dry-run` immediately and streams the output inline — no files are transferred and the task does not need to be saved first.
 4. Click **Save**
 
 **To run a task manually:** click **Run** in the Tasks list. The page redirects to Job History where you can watch the live log.
@@ -257,7 +286,7 @@ Every run (manual, scheduled, or dry-run) creates a **Job Run** record with:
 - Trigger: `manual` / `scheduled` / `dry_run`
 - Full rsync output log, persisted to `data/logs/<id>.log`
 
-Click any row in Job History to view its log. Running jobs stream live output via SSE; completed jobs load the full log from disk.
+Click any row in Job History to view its log. Running jobs stream live output via SSE; completed jobs load the full log from disk. Status badges update automatically — no reload needed. Use **Purge History** (with confirmation) to delete all completed runs and their log files in one step; running jobs are never affected.
 
 ---
 
@@ -289,3 +318,4 @@ Full interactive docs available at `http://localhost:8000/docs` (Swagger UI).
 | GET | `/api/job-runs/{id}` | Get run detail |
 | GET | `/api/job-runs/{id}/log` | Get full log text |
 | GET | `/api/job-runs/{id}/stream` | SSE live log stream |
+| DELETE | `/api/job-runs` | Purge all completed runs and log files |
