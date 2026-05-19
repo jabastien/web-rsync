@@ -24,6 +24,22 @@ def list_job_runs(
     return q.limit(limit).all()
 
 
+@router.delete("", status_code=200)
+def purge_job_runs(db: Session = Depends(get_db)):
+    """Delete all completed runs and their log files. Running jobs are not touched."""
+    runs = db.query(JobRun).filter(JobRun.status != "running").all()
+    for run in runs:
+        if run.log_path:
+            log = Path(run.log_path)
+            try:
+                log.unlink(missing_ok=True)
+            except Exception:
+                pass
+        db.delete(run)
+    db.commit()
+    return {"deleted": len(runs)}
+
+
 @router.get("/{run_id}", response_model=JobRunRead)
 def get_job_run(run_id: int, db: Session = Depends(get_db)):
     run = db.get(JobRun, run_id)

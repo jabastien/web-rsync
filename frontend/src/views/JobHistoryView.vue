@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useJobsStore } from "../stores/jobs";
 import LogViewer from "../components/LogViewer.vue";
+import ConfirmModal from "../components/ConfirmModal.vue";
 
 const store = useJobsStore();
 const route = useRoute();
 const selectedRun = ref<number | null>(route.params.id ? Number(route.params.id) : null);
+const showPurgeConfirm = ref(false);
 
 onMounted(() => store.fetchAll());
+
+const completedCount = computed(() => store.runs.filter(r => r.status !== "running").length);
 
 function statusClass(s: string) {
   return `badge badge-${s}`;
@@ -18,11 +22,26 @@ function select(id: number) {
   selectedRun.value = id;
 }
 
+async function confirmPurge() {
+  await store.purge();
+  showPurgeConfirm.value = false;
+  if (selectedRun.value !== null) {
+    const stillExists = store.runs.some(r => r.id === selectedRun.value);
+    if (!stillExists) selectedRun.value = null;
+  }
+}
 </script>
 
 <template>
   <div class="page">
-    <h1 class="page-title">Job History</h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h1 class="page-title" style="margin:0">Job History</h1>
+      <button
+        class="btn-danger"
+        :disabled="completedCount === 0"
+        @click="showPurgeConfirm = true"
+      >Purge History</button>
+    </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="card" style="padding:0;overflow:hidden">
@@ -59,4 +78,13 @@ function select(id: number) {
       </div>
     </div>
   </div>
+
+  <ConfirmModal
+    v-if="showPurgeConfirm"
+    title="Purge Job History"
+    :message="`Permanently delete ${completedCount} completed run${completedCount !== 1 ? 's' : ''} and their log files? Running jobs are not affected. This cannot be undone.`"
+    confirmLabel="Purge"
+    @confirm="confirmPurge"
+    @cancel="showPurgeConfirm = false"
+  />
 </template>

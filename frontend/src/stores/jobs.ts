@@ -20,5 +20,10 @@ export const useJobsStore = defineStore("jobs", () => {
     runs.value = (await api.getJobRuns(params)).data;
   }
 
-  return { runs, fetchAll };
+  async function purge() {
+    await api.purgeJobRuns();
+    runs.value = runs.value.filter(r => r.status === "running");
+  }
+
+  return { runs, fetchAll, purge };
 });

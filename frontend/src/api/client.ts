@@ -35,6 +35,7 @@ export const deployKey = (id: number, password: string) =>
 export const getJobRuns = (params?: object) => api.get("/job-runs", { params });
 export const getJobRun = (id: number) => api.get(`/job-runs/${id}`);
 export const getJobLog = (id: number) => api.get(`/job-runs/${id}/log`);
+export const purgeJobRuns = () => api.delete("/job-runs");
 
 // ---- System ----
 export const getHealth = () => api.get("/system/health");
