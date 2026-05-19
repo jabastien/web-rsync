@@ -8,6 +8,7 @@ const store = useHostsStore();
 const publicKey = ref("");
 const deployModal = ref<{ hostId: number; password: string } | null>(null);
 const deployError = ref("");
+const deploySuccess = ref(false);
 const pendingDelete = ref<{ id: number; name: string } | null>(null);
 
 onMounted(async () => {
@@ -19,14 +20,21 @@ onMounted(async () => {
 function openDeploy(hostId: number) {
   deployModal.value = { hostId, password: "" };
   deployError.value = "";
+  deploySuccess.value = false;
+}
+
+function closeDeploy() {
+  deployModal.value = null;
+  deploySuccess.value = false;
+  deployError.value = "";
 }
 
 async function submitDeploy() {
   if (!deployModal.value) return;
+  deployError.value = "";
   try {
     await deployKey(deployModal.value.hostId, deployModal.value.password);
-    deployModal.value = null;
-    alert("Key deployed successfully!");
+    deploySuccess.value = true;
   } catch (e: any) {
     deployError.value = e.response?.data?.detail ?? e.message;
   }
@@ -89,21 +97,37 @@ async function confirmDelete() {
     </div>
 
     <!-- Deploy Key Modal -->
-    <div v-if="deployModal" class="modal-overlay" @click.self="deployModal=null">
+    <div v-if="deployModal" class="modal-overlay" @click.self="closeDeploy">
       <div class="card" style="width:380px;margin:auto">
-        <h3 style="margin-top:0">Deploy SSH Key</h3>
-        <p style="color:#6b7280;font-size:13px">
-          Enter the SSH password to add the server's public key to authorized_keys.
-        </p>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" v-model="deployModal.password" @keyup.enter="submitDeploy" autofocus />
-        </div>
-        <p v-if="deployError" style="color:red">{{ deployError }}</p>
-        <div style="display:flex;gap:8px">
-          <button class="btn-primary" @click="submitDeploy">Deploy</button>
-          <button class="btn-secondary" @click="deployModal=null">Cancel</button>
-        </div>
+        <!-- Success state -->
+        <template v-if="deploySuccess">
+          <div class="deploy-success">
+            <span class="deploy-success-icon">✓</span>
+            <h3 class="deploy-success-title">Key deployed successfully</h3>
+            <p class="deploy-success-msg">
+              The server's public key has been added to <code>~/.ssh/authorized_keys</code>
+              on the remote host. rsync tasks to this host will now authenticate without a password.
+            </p>
+          </div>
+          <button class="btn-primary" @click="closeDeploy">Close</button>
+        </template>
+
+        <!-- Form state -->
+        <template v-else>
+          <h3 style="margin-top:0">Deploy SSH Key</h3>
+          <p style="color:#6b7280;font-size:13px">
+            Enter the SSH password to add the server's public key to authorized_keys.
+          </p>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" v-model="deployModal.password" @keyup.enter="submitDeploy" autofocus />
+          </div>
+          <p v-if="deployError" class="deploy-error">{{ deployError }}</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" @click="submitDeploy">Deploy</button>
+            <button class="btn-secondary" @click="closeDeploy">Cancel</button>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -147,5 +171,40 @@ async function confirmDelete() {
   align-items: center;
   justify-content: center;
   z-index: 100;
+}
+
+.deploy-success {
+  text-align: center;
+  padding: 8px 0 20px;
+}
+.deploy-success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.deploy-success-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+.deploy-success-msg {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.deploy-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 8px 0 0;
 }
 </style>
