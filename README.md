@@ -39,6 +39,79 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 
 ---
 
+## Deploy on a New System
+
+### Prerequisites
+
+| Requirement | Version |
+|-------------|---------|
+| Docker + Compose plugin | 24+ |
+| git | any |
+| Node.js *(Proxmox LXC path only)* | 18+ |
+
+### 1 — Clone from Gitea
+
+```bash
+git clone https://gitea.vertieres.net/alain/web-RSync.git
+cd web-RSync
+```
+
+### 2 — Create the data directory and config
+
+```bash
+mkdir -p /docker/web-rsync/data
+cp .env.example /docker/web-rsync/.env   # edit if needed
+```
+
+Create `/docker/web-rsync/docker-compose.yml` (see [example below](#docker-composeyml-example)).
+
+### 3 — Build and start
+
+**Normal Docker host** (standard multi-stage build — Node + Python in one step):
+
+```bash
+cp docker-compose.yml /docker/web-rsync/docker-compose.yml   # or write your own
+docker compose -f /docker/web-rsync/docker-compose.yml up --build -d
+```
+
+**Proxmox LXC** (AppArmor blocks `docker build` RUN steps — use the container-commit workaround):
+
+```bash
+# Build the Vue frontend first (requires Node.js on the host)
+cd frontend && npm install && npm run build && cd ..
+
+# Copy rebuild script to deploy location and run it
+cp /docker/web-rsync/rebuild.sh /docker/web-rsync/rebuild.sh   # already present if cloned
+/docker/web-rsync/rebuild.sh
+```
+
+> If `rebuild.sh` is not yet at `/docker/web-rsync/`, copy it from the repo root:
+> ```bash
+> cp rebuild.sh /docker/web-rsync/rebuild.sh
+> chmod +x /docker/web-rsync/rebuild.sh
+> ```
+
+### 4 — Verify
+
+```bash
+curl http://localhost:8000/api/system/health
+# → {"status":"ok"}
+```
+
+Open `http://<host-ip>:8000` in a browser.
+
+### Re-deploying after code changes
+
+```bash
+git pull
+# Normal host:
+docker compose -f /docker/web-rsync/docker-compose.yml up --build -d
+# Proxmox LXC:
+cd frontend && npm run build && cd .. && /docker/web-rsync/rebuild.sh
+```
+
+---
+
 ## Quick Start (dev)
 
 ```bash
