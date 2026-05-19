@@ -33,35 +33,44 @@ async function clone(id: number) {
 
     <div class="card" style="padding:0">
       <table>
+        <colgroup>
+          <col class="col-name">
+          <col class="col-path">
+          <col class="col-path">
+          <col class="col-schedule">
+          <col class="col-enabled">
+        </colgroup>
         <thead>
           <tr>
-            <th>Name</th><th>Source</th><th>Destination</th>
-            <th>Schedule</th><th>Enabled</th><th>Actions</th>
+            <th>Name</th><th>Source</th><th>Destination</th><th>Schedule</th><th>Enabled</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="task in store.tasks" :key="task.id">
-            <td><strong>{{ task.name }}</strong></td>
-            <td><code>{{ task.source_path }}</code></td>
-            <td><code>{{ task.dest_path }}</code></td>
-            <td><ScheduleBadge :schedule="task.schedule" /></td>
-            <td>
-              <input type="checkbox" :checked="task.enabled"
-                @change="store.toggle(task.id, ($event.target as HTMLInputElement).checked)" />
-            </td>
-            <td style="white-space:nowrap">
-              <button class="btn-primary btn-sm" @click="run(task.id)">Run</button>
-              <button class="btn-secondary btn-sm" style="margin-left:4px" @click="dry(task.id)">Dry</button>
-              <RouterLink :to="`/tasks/${task.id}/edit`">
-                <button class="btn-secondary btn-sm" style="margin-left:4px">Edit</button>
-              </RouterLink>
-              <button class="btn-secondary btn-sm" style="margin-left:4px" @click="clone(task.id)">Clone</button>
-              <button class="btn-danger btn-sm" style="margin-left:4px"
-                @click="store.remove(task.id)">Del</button>
-            </td>
-          </tr>
+          <template v-for="task in store.tasks" :key="task.id">
+            <tr class="data-row">
+              <td><strong>{{ task.name }}</strong></td>
+              <td class="path-cell"><code>{{ task.source_path }}</code></td>
+              <td class="path-cell"><code>{{ task.dest_path }}</code></td>
+              <td><ScheduleBadge :schedule="task.schedule" /></td>
+              <td>
+                <input type="checkbox" :checked="task.enabled"
+                  @change="store.toggle(task.id, ($event.target as HTMLInputElement).checked)" />
+              </td>
+            </tr>
+            <tr class="actions-row">
+              <td colspan="5">
+                <button class="btn-primary btn-sm" @click="run(task.id)">Run</button>
+                <button class="btn-secondary btn-sm" @click="dry(task.id)">Dry</button>
+                <RouterLink :to="`/tasks/${task.id}/edit`">
+                  <button class="btn-secondary btn-sm">Edit</button>
+                </RouterLink>
+                <button class="btn-secondary btn-sm" @click="clone(task.id)">Clone</button>
+                <button class="btn-danger btn-sm" @click="store.remove(task.id)">Del</button>
+              </td>
+            </tr>
+          </template>
           <tr v-if="store.tasks.length === 0">
-            <td colspan="6" style="text-align:center;color:#9ca3af;padding:24px">
+            <td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">
               No tasks yet. <RouterLink to="/tasks/new">Create one</RouterLink>.
             </td>
           </tr>
@@ -70,3 +79,27 @@ async function clone(id: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.col-name     { width: 15%; }
+.col-path     { width: 32%; }
+.col-schedule { width: 13%; }
+.col-enabled  { width: 8%; }
+
+.path-cell {
+  max-width: 0;          /* lets the colgroup width drive truncation */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-row td { border-bottom: none; }
+
+.actions-row td {
+  padding-top: 2px;
+  padding-bottom: 8px;
+}
+
+.actions-row button,
+.actions-row a { margin-right: 4px; }
+</style>

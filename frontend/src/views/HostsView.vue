@@ -45,25 +45,35 @@ async function submitDeploy() {
 
     <div class="card" style="padding:0">
       <table>
+        <colgroup>
+          <col class="col-name">
+          <col class="col-hostname">
+          <col class="col-port">
+          <col class="col-user">
+        </colgroup>
         <thead>
-          <tr><th>Name</th><th>Hostname</th><th>Port</th><th>User</th><th>Actions</th></tr>
+          <tr><th>Name</th><th>Hostname</th><th>Port</th><th>User</th></tr>
         </thead>
         <tbody>
-          <tr v-for="host in store.hosts" :key="host.id">
-            <td><strong>{{ host.name }}</strong></td>
-            <td>{{ host.hostname }}</td>
-            <td>{{ host.port }}</td>
-            <td>{{ host.username }}</td>
-            <td style="white-space:nowrap">
-              <button class="btn-secondary btn-sm" @click="openDeploy(host.id)">Deploy Key</button>
-              <RouterLink :to="`/hosts/${host.id}/edit`">
-                <button class="btn-secondary btn-sm" style="margin-left:4px">Edit</button>
-              </RouterLink>
-              <button class="btn-danger btn-sm" style="margin-left:4px" @click="store.remove(host.id)">Del</button>
-            </td>
-          </tr>
+          <template v-for="host in store.hosts" :key="host.id">
+            <tr class="data-row">
+              <td><strong>{{ host.name }}</strong></td>
+              <td class="truncate-cell">{{ host.hostname }}</td>
+              <td>{{ host.port }}</td>
+              <td>{{ host.username }}</td>
+            </tr>
+            <tr class="actions-row">
+              <td colspan="4">
+                <button class="btn-secondary btn-sm" @click="openDeploy(host.id)">Deploy Key</button>
+                <RouterLink :to="`/hosts/${host.id}/edit`">
+                  <button class="btn-secondary btn-sm">Edit</button>
+                </RouterLink>
+                <button class="btn-danger btn-sm" @click="store.remove(host.id)">Del</button>
+              </td>
+            </tr>
+          </template>
           <tr v-if="store.hosts.length === 0">
-            <td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">
+            <td colspan="4" style="text-align:center;color:#9ca3af;padding:24px">
               No hosts yet. <RouterLink to="/hosts/new">Add one</RouterLink>.
             </td>
           </tr>
@@ -93,6 +103,28 @@ async function submitDeploy() {
 </template>
 
 <style scoped>
+.col-name     { width: 20%; }
+.col-hostname { width: 45%; }
+.col-port     { width: 10%; }
+.col-user     { width: 25%; }
+
+.truncate-cell {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-row td { border-bottom: none; }
+
+.actions-row td {
+  padding-top: 2px;
+  padding-bottom: 8px;
+}
+
+.actions-row button,
+.actions-row a { margin-right: 4px; }
+
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,.4);
