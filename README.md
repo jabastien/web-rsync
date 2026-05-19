@@ -103,8 +103,8 @@ A **Task** defines one rsync job: source, destination, options, and an optional 
 1. Go to **Tasks → New Task**
 2. Fill in:
    - **Name** — a unique label for this task
-   - **Source Path** — local path (`/srv/data/`) or remote (`user@host:/path/`)
-   - **Destination Path** — same format; at least one side must be local unless using an rsync daemon
+   - **Source Path** — local path (`/srv/data/`) or remote SSH path (`user@host:/path/`)
+   - **Destination Path** — same format; both sides can be remote (see [Remote → Remote](#remote--remote-ssh--ssh))
    - **rsync Options** — raw flags passed directly to rsync (default: `-avz`). Use the **Browse flags** panel to explore available options.
    - **Schedule** — optional cron expression (e.g. `0 2 * * *` = every day at 02:00). Leave blank for manual-only. A human-readable translation appears as you type.
    - **Enabled** — uncheck to disable without deleting
@@ -122,8 +122,27 @@ A **Task** defines one rsync job: source, destination, options, and an optional 
 | Local → local | `/home/alain/docs/` | `/mnt/backup/docs/` |
 | Local → remote (SSH) | `/home/alain/docs/` | `alain@nas:/backup/docs/` |
 | Remote → local (SSH) | `alain@nas:/data/` | `/mnt/local/` |
+| Remote → remote (SSH) | `alain@host1:/data/` | `alain@host2:/backup/` |
 
 > Trailing slash on the source matters to rsync: `src/` copies the *contents*; `src` copies the *directory itself*.
+
+#### Remote → Remote (SSH → SSH)
+
+rsync does not natively support two remote endpoints. web-RSync handles this transparently: when both paths are SSH remotes, the server SSHes into the source host and runs rsync from there, forwarding its SSH agent (`-A`) so the source can authenticate to the destination — the private key never leaves the server.
+
+```
+web-RSync server  →ssh -A→  source host  →rsync→  destination host
+```
+
+**Prerequisites:**
+
+1. Deploy the server's public key to **both** hosts using the **Deploy Key** button on the Hosts page.
+2. Create the task with both paths as `user@host:/path/` — the server detects the scenario automatically, no extra configuration required.
+
+**Notes:**
+- The source host must have `rsync` installed.
+- `StrictHostKeyChecking` is set to `accept-new` on both hops, so first-time connections are handled automatically.
+- For large transfers, consider adding `--info=progress2` to rsync options for cleaner progress output in the log viewer.
 
 #### Common rsync option sets
 
