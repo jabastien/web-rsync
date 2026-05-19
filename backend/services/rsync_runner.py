@@ -36,19 +36,17 @@ def _parse_remote(path: str) -> tuple[str, str]:
     return host, remote_path
 
 
-def _build_rsync_cmd(task: Task, dry_run: bool = False) -> list[str]:
-    options = shlex.split(task.rsync_options)
-    if dry_run and "--dry-run" not in options and "-n" not in options:
-        options = ["--dry-run"] + options
+def _build_cmd(source_path: str, dest_path: str, options: list[str]) -> list[str]:
+    """Build the rsync (or ssh+rsync) command for any source/dest combination."""
     ssh_key = settings.ssh_dir / "id_rsa"
 
-    if _is_remote(task.source_path) and _is_remote(task.dest_path):
+    if _is_remote(source_path) and _is_remote(dest_path):
         # Remote→remote: SSH into source host and run rsync from there.
         # -A forwards the server's SSH agent so the source can authenticate
         # to the destination without the private key leaving the server.
-        source_host, source_path = _parse_remote(task.source_path)
+        source_host, source_local = _parse_remote(source_path)
         inner_opts = options + ["-e", "ssh -o StrictHostKeyChecking=accept-new"]
-        inner_cmd = ["rsync"] + inner_opts + [source_path, task.dest_path]
+        inner_cmd = ["rsync"] + inner_opts + [source_local, dest_path]
         inner_str = " ".join(shlex.quote(a) for a in inner_cmd)
         cmd = ["ssh", "-A", "-o", "StrictHostKeyChecking=accept-new"]
         if ssh_key.exists():
@@ -57,8 +55,15 @@ def _build_rsync_cmd(task: Task, dry_run: bool = False) -> list[str]:
         return cmd
 
     if ssh_key.exists():
-        options += ["-e", f"ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new"]
-    return ["rsync"] + options + [task.source_path, task.dest_path]
+        options = options + ["-e", f"ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new"]
+    return ["rsync"] + options + [source_path, dest_path]
+
+
+def _build_rsync_cmd(task: Task, dry_run: bool = False) -> list[str]:
+    options = shlex.split(task.rsync_options)
+    if dry_run and "--dry-run" not in options and "-n" not in options:
+        options = ["--dry-run"] + options
+    return _build_cmd(task.source_path, task.dest_path, options)
 
 
 async def _start_run(task_id: int | None, trigger: str, cmd: list[str]) -> int:
@@ -113,10 +118,7 @@ async def run_preview(source_path: str, dest_path: str, rsync_options: str) -> i
         options = ["--dry-run"] + options
     if "-v" not in options and "--verbose" not in options:
         options = ["-v"] + options
-    ssh_key = settings.ssh_dir / "id_rsa"
-    if ssh_key.exists():
-        options += ["-e", f"ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new"]
-    cmd = ["rsync"] + options + [source_path, dest_path]
+    cmd = _build_cmd(source_path, dest_path, options)
     return await _start_run(None, "dry_run", cmd)
 
 
