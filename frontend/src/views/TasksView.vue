@@ -11,12 +11,12 @@ const router = useRouter();
 onMounted(() => store.fetchAll());
 
 async function run(id: number) {
-  await runTask(id);
-  router.push("/history");
+  const res = await runTask(id);
+  router.push(`/history/${res.data.run_id}`);
 }
 async function dry(id: number) {
-  await dryRunTask(id);
-  router.push("/history");
+  const res = await dryRunTask(id);
+  router.push(`/history/${res.data.run_id}`);
 }
 async function clone(id: number) {
   await cloneTask(id);

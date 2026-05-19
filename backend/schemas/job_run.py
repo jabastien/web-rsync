@@ -10,6 +10,5 @@ class JobRunRead(BaseModel):
     finished_at: datetime | None
     exit_code: int | None
     status: str
-    log_path: str
 
     model_config = {"from_attributes": True}

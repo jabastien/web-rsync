@@ -59,21 +59,11 @@ sqlite3 data/web_rsync.db
 
 ## Context & Notes
 
-See `context/` folder for lessons learned and per-topic notes.
+**Read `context/lessons_learned.md` at the start of every session before doing any work.**
 
 ## Tree
 
 - `context/lessons_learned.md` — Dated lessons from past sessions
 
-## Implementation Status
-
-All 6 phases implemented (2026-03-15):
-- Phase 1: Backend skeleton, models, CRUD routers ✓
-- Phase 2: Rsync execution, job runs, SSE streaming ✓
-- Phase 3: APScheduler integration ✓
-- Phase 4: SSH key management (paramiko) ✓
-- Phase 5: Vue 3 frontend (all views, stores, components) ✓
-- Phase 6: Docker multi-stage build ✓
-
-**Pending:** Node.js must be installed to build/run the frontend. Backend runs standalone via `./run.sh`.
+**Note:** Node.js must be installed to build/run the frontend. Backend runs standalone via `./run.sh`.
 

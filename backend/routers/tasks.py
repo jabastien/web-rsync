@@ -1,4 +1,3 @@
-import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -63,7 +62,7 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(404, "Task not found")
-    for k, v in payload.model_dump(exclude_none=True).items():
+    for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(task, k, v)
     db.commit()
     db.refresh(task)
@@ -98,9 +97,8 @@ async def run_task(task_id: int, db: Session = Depends(get_db)):
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(404, "Task not found")
-    run_id = asyncio.create_task(rsync_runner.run_task(task_id, "manual"))
-    # Return immediately; client polls job-runs or streams SSE
-    return {"detail": "Job started", "task_id": task_id}
+    run_id = await rsync_runner.run_task(task_id, "manual")
+    return {"run_id": run_id, "task_id": task_id}
 
 
 @router.post("/{task_id}/dry-run")
@@ -108,8 +106,8 @@ async def dry_run_task(task_id: int, db: Session = Depends(get_db)):
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(404, "Task not found")
-    asyncio.create_task(rsync_runner.run_dry(task_id))
-    return {"detail": "Dry-run started", "task_id": task_id}
+    run_id = await rsync_runner.run_dry(task_id)
+    return {"run_id": run_id, "task_id": task_id}
 
 
 @router.post("/{task_id}/clone", response_model=TaskRead, status_code=201)

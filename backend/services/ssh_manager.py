@@ -47,17 +47,36 @@ def deploy_key(hostname: str, port: int, username: str, password: str) -> None:
         raise ValueError("No public key available — generate one first")
 
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # WarningPolicy logs unknown hosts; AutoAddPolicy would silently trust any host key (MITM risk).
+    # A pre-populated known_hosts file (RejectPolicy) would be fully secure.
+    client.set_missing_host_key_policy(paramiko.WarningPolicy())
     try:
         client.connect(hostname, port=port, username=username, password=password, timeout=10)
-        stdin, stdout, stderr = client.exec_command(
-            "mkdir -p ~/.ssh && chmod 700 ~/.ssh && "
-            f"echo {pub_key!r} >> ~/.ssh/authorized_keys && "
-            "chmod 600 ~/.ssh/authorized_keys"
-        )
-        exit_code = stdout.channel.recv_exit_status()
-        if exit_code != 0:
-            err = stderr.read().decode()
-            raise RuntimeError(f"Remote command failed (exit {exit_code}): {err}")
+
+        _, stdout, stderr = client.exec_command("mkdir -p ~/.ssh && chmod 700 ~/.ssh")
+        if stdout.channel.recv_exit_status() != 0:
+            raise RuntimeError(f"Failed to create ~/.ssh: {stderr.read().decode()}")
+
+        # Resolve home directory — SFTP paths don't expand ~
+        _, home_out, _ = client.exec_command("echo $HOME")
+        home = home_out.read().decode().strip()
+        if not home:
+            raise RuntimeError("Could not determine remote home directory")
+        auth_path = f"{home}/.ssh/authorized_keys"
+
+        # Use SFTP to write the key — avoids shell quoting issues entirely
+        sftp = client.open_sftp()
+        try:
+            try:
+                with sftp.open(auth_path, "r") as f:
+                    existing = f.read().decode(errors="replace")
+            except IOError:
+                existing = ""
+            if pub_key not in existing:
+                with sftp.open(auth_path, "a") as f:
+                    f.write((pub_key + "\n").encode())
+            sftp.chmod(auth_path, 0o600)
+        finally:
+            sftp.close()
     finally:
         client.close()

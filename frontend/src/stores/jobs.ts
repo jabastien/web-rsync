@@ -10,7 +10,6 @@ export interface JobRun {
   finished_at: string | null;
   exit_code: number | null;
   status: string;
-  log_path: string;
 }
 
 export const useJobsStore = defineStore("jobs", () => {

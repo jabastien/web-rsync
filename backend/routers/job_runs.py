@@ -67,11 +67,10 @@ async def stream_log(run_id: int, db: Session = Depends(get_db)):
                     for line in new_text.splitlines():
                         yield {"data": line}
 
-            # Re-check run status from DB
-            fresh_db = db
-            fresh_run = fresh_db.get(JobRun, run_id)
-            if fresh_run and fresh_run.status != "running":
-                yield {"event": "done", "data": fresh_run.status}
+            # Expire the cached object to force a fresh SELECT on next attribute access
+            db.expire(run)
+            if run.status != "running":
+                yield {"event": "done", "data": run.status}
                 return
 
             await asyncio.sleep(0.5)
