@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 if [ ! -d ".venv" ]; then
   echo "Creating virtualenv..."
   uv venv .venv
-  uv pip install -e backend/
+  uv pip install -r backend/pyproject.toml
 fi
 
 source .venv/bin/activate
