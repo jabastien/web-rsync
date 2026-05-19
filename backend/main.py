@@ -10,7 +10,7 @@ from .config import settings
 from .database import Base, SessionLocal, engine
 from .routers import hosts, job_runs, system, tasks
 from .services import rsync_runner, scheduler as sched_svc
-from .services.ssh_manager import ensure_ssh_key
+from .services.ssh_manager import ensure_ssh_key, ensure_ssh_agent, stop_ssh_agent
 from .models import task as _task_model  # noqa: F401 — ensure models are registered
 from .models import host as _host_model  # noqa: F401
 from .models import job_run as _job_run_model  # noqa: F401
@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
         db.close()
 
     ensure_ssh_key()
+    ensure_ssh_agent()
     sched_svc.scheduler.start()
     logger.info("web-RSync started")
 
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     sched_svc.scheduler.shutdown(wait=False)
+    stop_ssh_agent()
     logger.info("web-RSync stopped")
 
 

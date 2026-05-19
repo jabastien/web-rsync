@@ -23,11 +23,39 @@ def get_semaphore() -> asyncio.Semaphore:
     return _semaphore
 
 
+def _is_remote(path: str) -> bool:
+    """True for user@host:/path or host:/path — false for local paths and rsync:// URLs."""
+    if "://" in path or path.startswith("/") or path.startswith("./"):
+        return False
+    return ":" in path
+
+
+def _parse_remote(path: str) -> tuple[str, str]:
+    """Split 'user@host:/path' → ('user@host', '/path')."""
+    host, _, remote_path = path.partition(":")
+    return host, remote_path
+
+
 def _build_rsync_cmd(task: Task, dry_run: bool = False) -> list[str]:
     options = shlex.split(task.rsync_options)
     if dry_run and "--dry-run" not in options and "-n" not in options:
         options = ["--dry-run"] + options
     ssh_key = settings.ssh_dir / "id_rsa"
+
+    if _is_remote(task.source_path) and _is_remote(task.dest_path):
+        # Remote→remote: SSH into source host and run rsync from there.
+        # -A forwards the server's SSH agent so the source can authenticate
+        # to the destination without the private key leaving the server.
+        source_host, source_path = _parse_remote(task.source_path)
+        inner_opts = options + ["-e", "ssh -o StrictHostKeyChecking=accept-new"]
+        inner_cmd = ["rsync"] + inner_opts + [source_path, task.dest_path]
+        inner_str = " ".join(shlex.quote(a) for a in inner_cmd)
+        cmd = ["ssh", "-A", "-o", "StrictHostKeyChecking=accept-new"]
+        if ssh_key.exists():
+            cmd += ["-i", str(ssh_key)]
+        cmd += [source_host, inner_str]
+        return cmd
+
     if ssh_key.exists():
         options += ["-e", f"ssh -i {ssh_key} -o StrictHostKeyChecking=accept-new"]
     return ["rsync"] + options + [task.source_path, task.dest_path]

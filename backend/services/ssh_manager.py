@@ -1,6 +1,7 @@
 import logging
 import os
 import stat
+import subprocess
 from pathlib import Path
 
 import paramiko
@@ -11,6 +12,55 @@ logger = logging.getLogger(__name__)
 
 KEY_PATH = settings.ssh_dir / "id_rsa"
 PUB_PATH = settings.ssh_dir / "id_rsa.pub"
+
+_agent_pid: int | None = None
+
+
+def ensure_ssh_agent() -> None:
+    """Start ssh-agent and load the managed key into it.
+
+    Sets SSH_AUTH_SOCK + SSH_AGENT_PID in the process environment so all
+    child processes (including rsync's ssh transport) inherit the agent.
+    Required for remote→remote sync: the agent is forwarded via ssh -A to
+    the source host, allowing rsync there to authenticate to the destination.
+    """
+    global _agent_pid
+
+    # Reuse an already-running agent if the socket is still live
+    existing_sock = os.environ.get("SSH_AUTH_SOCK")
+    if existing_sock and Path(existing_sock).exists() and _agent_pid:
+        return
+
+    try:
+        result = subprocess.run(
+            ["ssh-agent", "-s"], capture_output=True, text=True, check=True
+        )
+        for line in result.stdout.splitlines():
+            if "=" in line and ";" in line:
+                kv = line.split(";")[0].strip()
+                k, _, v = kv.partition("=")
+                os.environ[k.strip()] = v.strip()
+                if k.strip() == "SSH_AGENT_PID":
+                    _agent_pid = int(v.strip())
+
+        subprocess.run(["ssh-add", str(KEY_PATH)], check=True, capture_output=True)
+        logger.info("SSH agent started (PID %d) and key loaded", _agent_pid or 0)
+    except Exception as e:
+        logger.warning("Could not start SSH agent (remote→remote sync unavailable): %s", e)
+
+
+def stop_ssh_agent() -> None:
+    """Kill the ssh-agent started by ensure_ssh_agent."""
+    global _agent_pid
+    if _agent_pid:
+        try:
+            subprocess.run(["kill", str(_agent_pid)], check=True, capture_output=True)
+            logger.info("SSH agent stopped (PID %d)", _agent_pid)
+        except Exception:
+            pass
+        _agent_pid = None
+        os.environ.pop("SSH_AUTH_SOCK", None)
+        os.environ.pop("SSH_AGENT_PID", None)
 
 
 def ensure_ssh_key():
