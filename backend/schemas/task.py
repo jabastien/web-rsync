@@ -8,6 +8,8 @@ class TaskBase(BaseModel):
     source_path: str
     dest_path: str
     rsync_options: str = "-avz"
+    exclude_patterns: str = ""
+    include_patterns: str = ""
     schedule: str | None = None
     enabled: bool = True
 
@@ -29,6 +31,8 @@ class TaskUpdate(BaseModel):
     source_path: str | None = None
     dest_path: str | None = None
     rsync_options: str | None = None
+    exclude_patterns: str | None = None
+    include_patterns: str | None = None
     schedule: str | None = None
     enabled: bool | None = None
 

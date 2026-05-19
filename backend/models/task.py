@@ -12,6 +12,8 @@ class Task(Base):
     source_path: Mapped[str] = mapped_column(String, nullable=False)
     dest_path: Mapped[str] = mapped_column(String, nullable=False)
     rsync_options: Mapped[str] = mapped_column(String, default="-avz")
+    exclude_patterns: Mapped[str] = mapped_column(String, default="", server_default="")
+    include_patterns: Mapped[str] = mapped_column(String, default="", server_default="")
     schedule: Mapped[str | None] = mapped_column(String, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

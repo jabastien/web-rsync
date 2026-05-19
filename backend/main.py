@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from sqlalchemy import text
 
 from .config import settings
 from .database import Base, SessionLocal, engine
@@ -26,6 +27,15 @@ async def lifespan(app: FastAPI):
     settings.log_dir.mkdir(parents=True, exist_ok=True)
 
     Base.metadata.create_all(bind=engine)
+
+    # Inline migration: add pattern columns to existing databases
+    with engine.connect() as conn:
+        for col in ("exclude_patterns", "include_patterns"):
+            try:
+                conn.execute(text(f"ALTER TABLE tasks ADD COLUMN {col} TEXT NOT NULL DEFAULT ''"))
+                conn.commit()
+            except Exception:
+                pass  # column already exists
 
     db = SessionLocal()
     try:

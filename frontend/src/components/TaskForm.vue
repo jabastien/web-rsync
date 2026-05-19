@@ -8,6 +8,8 @@ interface FormData {
   source_path: string;
   dest_path: string;
   rsync_options: string;
+  exclude_patterns: string;
+  include_patterns: string;
   schedule: string;
   enabled: boolean;
 }
@@ -20,6 +22,8 @@ const form = reactive<FormData>({
   source_path: props.initial?.source_path ?? "",
   dest_path: props.initial?.dest_path ?? "",
   rsync_options: props.initial?.rsync_options ?? "-avz",
+  exclude_patterns: props.initial?.exclude_patterns ?? "",
+  include_patterns: props.initial?.include_patterns ?? "",
   schedule: props.initial?.schedule ?? "",
   enabled: props.initial?.enabled ?? true,
 });
@@ -168,6 +172,8 @@ async function runPreview() {
       source_path: form.source_path,
       dest_path: form.dest_path,
       rsync_options: form.rsync_options,
+      exclude_patterns: form.exclude_patterns,
+      include_patterns: form.include_patterns,
     });
     previewRunId.value = res.data.run_id;
     streamPreview(res.data.run_id);
@@ -268,6 +274,30 @@ function submit() {
             <span class="flag-desc">{{ f.desc }}</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Pattern filters -->
+    <div class="patterns-row">
+      <div class="form-group" style="flex:1">
+        <label>Include Patterns <span class="label-hint">(--include-from)</span></label>
+        <textarea
+          v-model="form.include_patterns"
+          class="pattern-textarea"
+          placeholder="One pattern per line&#10;e.g. *.conf&#10;     important/"
+          spellcheck="false"
+        />
+        <div class="hint">Files matching these patterns are always included, even if an exclude pattern would otherwise skip them. Applied before excludes.</div>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>Exclude Patterns <span class="label-hint">(--exclude-from)</span></label>
+        <textarea
+          v-model="form.exclude_patterns"
+          class="pattern-textarea"
+          placeholder="One pattern per line&#10;e.g. *.tmp&#10;     .cache/&#10;     node_modules/"
+          spellcheck="false"
+        />
+        <div class="hint">Files matching these patterns are skipped. Use <code>/</code> suffix for directories, <code>*</code> as wildcard.</div>
       </div>
     </div>
 
@@ -386,6 +416,31 @@ function submit() {
   min-width: 160px;
 }
 .flag-desc { font-size: 12px; color: #6b7280; }
+
+/* ── Pattern filters ── */
+.patterns-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 0;
+}
+.patterns-row .form-group { margin-bottom: 14px; }
+
+.label-hint {
+  font-weight: 400;
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: "Fira Code", "Cascadia Code", monospace;
+}
+
+.pattern-textarea {
+  width: 100%;
+  min-height: 90px;
+  font-family: "Fira Code", "Cascadia Code", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+}
 
 /* ── Dry-run preview ── */
 .preview-section {

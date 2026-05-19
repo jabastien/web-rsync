@@ -12,6 +12,8 @@ class PreviewRequest(BaseModel):
     source_path: str
     dest_path: str
     rsync_options: str = "-avz"
+    exclude_patterns: str = ""
+    include_patterns: str = ""
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -44,7 +46,8 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
 async def preview_task(payload: PreviewRequest):
     """Ephemeral dry-run with form values — no saved task required."""
     run_id = await rsync_runner.run_preview(
-        payload.source_path, payload.dest_path, payload.rsync_options
+        payload.source_path, payload.dest_path, payload.rsync_options,
+        payload.exclude_patterns, payload.include_patterns,
     )
     return {"run_id": run_id}
 
@@ -123,6 +126,8 @@ def clone_task(task_id: int, db: Session = Depends(get_db)):
         source_path=task.source_path,
         dest_path=task.dest_path,
         rsync_options=task.rsync_options,
+        exclude_patterns=task.exclude_patterns,
+        include_patterns=task.include_patterns,
         schedule=None,  # Don't clone schedule to avoid duplicate jobs
         enabled=False,
     )

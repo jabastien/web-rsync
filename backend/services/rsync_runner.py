@@ -59,10 +59,36 @@ def _build_cmd(source_path: str, dest_path: str, options: list[str]) -> list[str
     return ["rsync"] + options + [source_path, dest_path]
 
 
+def _write_pattern_file(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content.strip() + "\n")
+
+
+def _inject_pattern_files(options: list[str], exclude_patterns: str, include_patterns: str,
+                           exclude_path: Path, include_path: Path) -> list[str]:
+    """Prepend --include-from and --exclude-from when patterns are present.
+
+    include-from must precede exclude-from so include rules are evaluated first."""
+    if include_patterns and include_patterns.strip():
+        _write_pattern_file(include_path, include_patterns)
+        options = [f"--include-from={include_path}"] + options
+    if exclude_patterns and exclude_patterns.strip():
+        _write_pattern_file(exclude_path, exclude_patterns)
+        options = [f"--exclude-from={exclude_path}"] + options
+    return options
+
+
 def _build_rsync_cmd(task: Task, dry_run: bool = False) -> list[str]:
     options = shlex.split(task.rsync_options)
     if dry_run and "--dry-run" not in options and "-n" not in options:
         options = ["--dry-run"] + options
+    options = _inject_pattern_files(
+        options,
+        task.exclude_patterns or "",
+        task.include_patterns or "",
+        settings.patterns_dir / f"{task.id}_exclude.txt",
+        settings.patterns_dir / f"{task.id}_include.txt",
+    )
     return _build_cmd(task.source_path, task.dest_path, options)
 
 
@@ -111,13 +137,21 @@ async def run_dry(task_id: int) -> int:
     return await _start_run(task_id, "dry_run", cmd)
 
 
-async def run_preview(source_path: str, dest_path: str, rsync_options: str) -> int:
+async def run_preview(source_path: str, dest_path: str, rsync_options: str,
+                      exclude_patterns: str = "", include_patterns: str = "") -> int:
     """Ephemeral dry-run with arbitrary paths/options — no saved task required."""
     options = shlex.split(rsync_options)
     if "--dry-run" not in options and "-n" not in options:
         options = ["--dry-run"] + options
     if "-v" not in options and "--verbose" not in options:
         options = ["-v"] + options
+    options = _inject_pattern_files(
+        options,
+        exclude_patterns,
+        include_patterns,
+        settings.patterns_dir / "preview_exclude.txt",
+        settings.patterns_dir / "preview_include.txt",
+    )
     cmd = _build_cmd(source_path, dest_path, options)
     return await _start_run(None, "dry_run", cmd)
 

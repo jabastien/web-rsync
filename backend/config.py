@@ -25,5 +25,10 @@ class Settings(BaseSettings):
     def ssh_dir(self) -> Path:
         return self.data_dir / "ssh"
 
+    @computed_field
+    @property
+    def patterns_dir(self) -> Path:
+        return self.data_dir / "patterns"
+
 
 settings = Settings()
