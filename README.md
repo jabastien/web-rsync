@@ -98,12 +98,21 @@ data/
 
 A **Task** defines one rsync job: source, destination, options, and an optional cron schedule.
 
+> **All rsync processes run on the web-RSync server, not in your browser.** Your browser is a control panel only — it sends instructions and displays logs but is never part of the file transfer.
+>
+> When running in Docker, **"local" paths refer to the filesystem inside the Docker container**, not the machine where you open the browser. To expose host directories to the container, add volume mounts to `docker-compose.yml`:
+> ```yaml
+> volumes:
+>   - ./data:/data          # already present (DB, logs, SSH keys)
+>   - /mnt/nas:/mnt/nas     # add any host path rsync should reach
+> ```
+
 **To create a task:**
 
 1. Go to **Tasks → New Task**
 2. Fill in:
    - **Name** — a unique label for this task
-   - **Source Path** — local path (`/srv/data/`) or remote SSH path (`user@host:/path/`)
+   - **Source Path** — path on the web-RSync server (`/mnt/source/`) or remote SSH path (`user@host:/path/`). Not your browser's machine.
    - **Destination Path** — same format; both sides can be remote (see [Remote → Remote](#remote--remote-ssh--ssh))
    - **rsync Options** — raw flags passed directly to rsync (default: `-avz`). Use the **Browse flags** panel to explore available options.
    - **Schedule** — optional cron expression (e.g. `0 2 * * *` = every day at 02:00). Leave blank for manual-only. A human-readable translation appears as you type.
@@ -117,11 +126,13 @@ A **Task** defines one rsync job: source, destination, options, and an optional 
 
 #### Path formats
 
+A bare path starting with `/` is **local to the web-RSync server** (inside the Docker container when using Docker). A path in `user@host:/path` form is a remote SSH endpoint.
+
 | Scenario | Source example | Destination example |
 |----------|---------------|-------------------|
-| Local → local | `/home/alain/docs/` | `/mnt/backup/docs/` |
-| Local → remote (SSH) | `/home/alain/docs/` | `alain@nas:/backup/docs/` |
-| Remote → local (SSH) | `alain@nas:/data/` | `/mnt/local/` |
+| Server → server *(both paths are on the container's filesystem)* | `/mnt/source/` | `/mnt/backup/` |
+| Server → remote (SSH) | `/mnt/source/` | `alain@nas:/backup/` |
+| Remote → server (SSH) | `alain@nas:/data/` | `/mnt/backup/` |
 | Remote → remote (SSH) | `alain@host1:/data/` | `alain@host2:/backup/` |
 
 > Trailing slash on the source matters to rsync: `src/` copies the *contents*; `src` copies the *directory itself*.

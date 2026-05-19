@@ -6,8 +6,8 @@
       <h2>What is web-RSync?</h2>
       <p>
         web-RSync is a browser-based manager for <strong>rsync</strong> jobs. It lets you define,
-        schedule, and monitor file-synchronization tasks between local and remote machines — without
-        touching the command line after the initial setup.
+        schedule, and monitor file-synchronization tasks between machines — without touching the
+        command line after the initial setup.
       </p>
       <p>Typical use cases:</p>
       <ul>
@@ -16,6 +16,26 @@
         <li>One-shot manual transfers with real-time progress</li>
         <li>Validating rsync options with a dry-run before committing</li>
       </ul>
+
+      <h3>How it works</h3>
+      <p>
+        All rsync processes run <strong>on the web-RSync server</strong>, not in your browser.
+        Your browser is only a control panel — it sends instructions and displays logs, but is
+        never involved in the actual file transfer.
+      </p>
+      <p>
+        When running in Docker (the standard deployment), <strong>"local" paths refer to the
+        filesystem inside the Docker container</strong>, not the machine where you open the
+        browser. A path like <code>/data/backups/</code> must exist inside the container.
+        To expose host directories, mount them in <code>docker-compose.yml</code>:
+      </p>
+      <pre class="code-block">volumes:
+  - ./data:/data          # already mounted (DB, logs, SSH keys)
+  - /mnt/nas:/mnt/nas     # add any host path you want rsync to reach</pre>
+      <p>
+        If both endpoints are remote SSH hosts, no volume mounts are needed — web-RSync
+        SSHes out and rsync runs between the two remote machines.
+      </p>
     </div>
 
     <div class="card section">
@@ -26,13 +46,34 @@
       </p>
 
       <h3>Path formats</h3>
+      <p>
+        A bare path starting with <code>/</code> is <strong>local to the web-RSync server</strong>
+        (i.e. inside the Docker container). A path containing <code>user@host:</code> is a remote
+        SSH endpoint. Your browser machine is never a source or destination.
+      </p>
       <table>
         <thead><tr><th>Scenario</th><th>Source example</th><th>Destination example</th></tr></thead>
         <tbody>
-          <tr><td>Local → local</td><td><code>/home/user/docs/</code></td><td><code>/mnt/backup/</code></td></tr>
-          <tr><td>Local → remote</td><td><code>/home/user/docs/</code></td><td><code>user@nas:/backup/</code></td></tr>
-          <tr><td>Remote → local</td><td><code>user@nas:/data/</code></td><td><code>/mnt/local/</code></td></tr>
-          <tr><td>Remote → remote</td><td><code>user@host1:/data/</code></td><td><code>user@host2:/backup/</code></td></tr>
+          <tr>
+            <td>Server → server<br><small style="color:#6b7280">(both paths local to the container)</small></td>
+            <td><code>/mnt/source/</code></td>
+            <td><code>/mnt/backup/</code></td>
+          </tr>
+          <tr>
+            <td>Server → remote</td>
+            <td><code>/mnt/source/</code></td>
+            <td><code>user@nas:/backup/</code></td>
+          </tr>
+          <tr>
+            <td>Remote → server</td>
+            <td><code>user@nas:/data/</code></td>
+            <td><code>/mnt/backup/</code></td>
+          </tr>
+          <tr>
+            <td>Remote → remote</td>
+            <td><code>user@host1:/data/</code></td>
+            <td><code>user@host2:/backup/</code></td>
+          </tr>
         </tbody>
       </table>
       <p class="note">
@@ -175,5 +216,15 @@
   padding: 8px 12px !important;
   border-radius: 2px;
   margin: 8px 0 !important;
+}
+.code-block {
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-family: monospace;
+  margin: 6px 0 10px;
+  white-space: pre;
+  overflow-x: auto;
 }
 </style>
