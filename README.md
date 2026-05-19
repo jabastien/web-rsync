@@ -155,15 +155,34 @@ web-RSync server  →ssh -A→  source host  →rsync→  destination host
 - `StrictHostKeyChecking` is set to `accept-new` on both hops, so first-time connections are handled automatically.
 - For large transfers, consider adding `--info=progress2` to rsync options for cleaner progress output in the log viewer.
 
-#### Common rsync option sets
+#### rsync option sets
 
-| Use case | Options |
-|----------|---------|
-| Standard archive | `-avz` |
-| Archive + delete removed files | `-avz --delete` |
-| Archive + preserve hard links | `-avzH` |
-| Bandwidth-limited backup | `-avz --bwlimit=5000` |
-| Mirror with dry-run first | `-avz --delete -n` |
+> The options field is passed directly to rsync — it is **not** processed by a shell. Constructs like `$(date +%F)` will not expand; use a fixed path instead.
+
+**Common**
+
+| Use case | Options | Notes |
+|----------|---------|-------|
+| Standard archive | `-avz` | Recursive, preserves permissions/times, compresses in transit |
+| Strict mirror | `-avz --delete` | Removes destination files that no longer exist at source |
+| Preserve hard links | `-avzH` | Important for deduplicated backups and system directories |
+| Bandwidth throttle | `-avz --bwlimit=50000` | Value is KB/s (50000 ≈ 50 MB/s) |
+| Mirror with dry-run first | `-avz --delete -n` | Validate what would be deleted before running for real |
+
+**Homelab scenarios**
+
+| Use case | Options | Notes |
+|----------|---------|-------|
+| VM / disk images | `-av --sparse` | Preserves sparse regions in qcow2, raw images, LXC rootfs. Drop `-z` — compressing binary images wastes CPU |
+| VM images + resumable | `-av --sparse --inplace --partial` | In-place writes halve peak disk usage; `--partial` resumes an interrupted transfer |
+| Cross-system (different UIDs) | `-avz --numeric-ids` | Uses numeric UID/GID instead of names — essential between Proxmox nodes or containers with different user databases |
+| Docker volumes / full permissions | `-avzAX` | Adds ACL (`-A`) and extended attribute (`-X`) preservation — important for Docker named volumes and system directories |
+| Stay within one filesystem | `-avz -x` | Don't cross mount points — prevents accidentally syncing bind-mounted paths or overlapping volumes |
+| Checksum-based comparison | `-avz --checksum` | Compares by file content instead of mtime+size — slower but reliable after a restore or when clocks differ between hosts |
+| Skip large files | `-avz --max-size=500m` | Avoid accidentally syncing large ISOs or VM disk images; supports `k`, `m`, `g` suffixes |
+| Exclude temp / cache | `-avz --exclude='*.tmp' --exclude='*.log'` | Chain as many `--exclude` flags as needed |
+| Resumable over unreliable links | `-avz --partial` | Keeps partially transferred files so the next run resumes from where it stopped |
+| Live progress (large transfers) | `-avz --info=progress2` | Compact single-line progress — cleaner than `-v` for thousands of files |
 
 ---
 

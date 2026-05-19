@@ -92,17 +92,79 @@
         the <strong>Deploy Key</strong> button on the Hosts page before running the task.</p>
 
       <h3>rsync Options</h3>
-      <p>Raw flags passed directly to rsync. Common sets:</p>
+      <p>
+        Raw flags passed directly to rsync. The field is <strong>not</strong> processed by a shell —
+        constructs like <code>$(date +%F)</code> are passed literally and will not expand.
+        Use the <strong>Browse flags</strong> panel in the task form to explore ~60 available flags.
+      </p>
+
+      <p style="font-weight:600;margin-top:12px;margin-bottom:4px">Common sets</p>
       <table>
-        <thead><tr><th>Use case</th><th>Options</th></tr></thead>
+        <thead><tr><th>Use case</th><th>Options</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td>Standard archive</td><td><code>-avz</code></td></tr>
-          <tr><td>Archive + delete removed files</td><td><code>-avz --delete</code></td></tr>
-          <tr><td>Archive + hard links</td><td><code>-avzH</code></td></tr>
-          <tr><td>Bandwidth-limited</td><td><code>-avz --bwlimit=5000</code></td></tr>
+          <tr><td>Standard archive</td><td><code>-avz</code></td><td>Recursive, preserves permissions/times, compresses in transit</td></tr>
+          <tr><td>Strict mirror</td><td><code>-avz --delete</code></td><td>Removes destination files that no longer exist at source</td></tr>
+          <tr><td>Preserve hard links</td><td><code>-avzH</code></td><td>Important for deduplicated backups and system directories</td></tr>
+          <tr><td>Bandwidth throttle</td><td><code>-avz --bwlimit=50000</code></td><td>Limit throughput; value is KB/s (50000 ≈ 50 MB/s)</td></tr>
         </tbody>
       </table>
-      <p>Use the <strong>Browse flags</strong> panel in the task form to explore ~60 available flags.</p>
+
+      <p style="font-weight:600;margin-top:12px;margin-bottom:4px">Homelab scenarios</p>
+      <table>
+        <thead><tr><th>Use case</th><th>Options</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>VM / disk images</td>
+            <td><code>-av --sparse</code></td>
+            <td>Preserves sparse regions in qcow2, raw images, and LXC rootfs. Drop <code>-z</code> — compressing binary images wastes CPU without saving space</td>
+          </tr>
+          <tr>
+            <td>VM images + resumable</td>
+            <td><code>-av --sparse --inplace --partial</code></td>
+            <td>In-place writes halve peak disk usage; <code>--partial</code> lets the next run resume an interrupted transfer</td>
+          </tr>
+          <tr>
+            <td>Cross-system (different UIDs)</td>
+            <td><code>-avz --numeric-ids</code></td>
+            <td>Uses numeric UID/GID instead of names — essential when syncing between Proxmox nodes or containers with different user databases</td>
+          </tr>
+          <tr>
+            <td>Docker volumes / full permissions</td>
+            <td><code>-avzAX</code></td>
+            <td>Adds ACL (<code>-A</code>) and extended attribute (<code>-X</code>) preservation — important for Docker named volumes and system directories</td>
+          </tr>
+          <tr>
+            <td>Stay within one filesystem</td>
+            <td><code>-avz -x</code></td>
+            <td>Don't cross mount points — prevents accidentally syncing bind-mounted paths or overlapping volumes</td>
+          </tr>
+          <tr>
+            <td>Checksum-based comparison</td>
+            <td><code>-avz --checksum</code></td>
+            <td>Compares by file content instead of mtime+size — slower but reliable after a restore or when clocks differ between hosts</td>
+          </tr>
+          <tr>
+            <td>Skip large files</td>
+            <td><code>-avz --max-size=500m</code></td>
+            <td>Avoid accidentally syncing large ISOs or VM disk images; supports <code>k</code>, <code>m</code>, <code>g</code> suffixes</td>
+          </tr>
+          <tr>
+            <td>Exclude temp / cache</td>
+            <td><code>-avz --exclude='*.tmp' --exclude='*.log'</code></td>
+            <td>Chain as many <code>--exclude</code> flags as needed; patterns are matched against the relative path</td>
+          </tr>
+          <tr>
+            <td>Resumable over unreliable links</td>
+            <td><code>-avz --partial</code></td>
+            <td>Keeps partially transferred files so the next run continues from where it stopped — useful for large files over VPN or WAN</td>
+          </tr>
+          <tr>
+            <td>Live progress (large transfers)</td>
+            <td><code>-avz --info=progress2</code></td>
+            <td>Compact single-line progress — cleaner than <code>-v</code> when transferring thousands of files</td>
+          </tr>
+        </tbody>
+      </table>
 
       <h3>Dry Run</h3>
       <p>
