@@ -56,18 +56,18 @@
         <tbody>
           <tr>
             <td>Server → server<br><small style="color:#6b7280">(both paths local to the container)</small></td>
-            <td><code>/mnt/source/</code></td>
-            <td><code>/mnt/backup/</code></td>
+            <td><code>/mnt/nas/source/</code></td>
+            <td><code>/mnt/nas/backup/</code></td>
           </tr>
           <tr>
             <td>Server → remote</td>
-            <td><code>/mnt/source/</code></td>
-            <td><code>user@nas:/backup/</code></td>
+            <td><code>/mnt/nas/source/</code></td>
+            <td><code>user@host2:/backup/</code></td>
           </tr>
           <tr>
             <td>Remote → server</td>
-            <td><code>user@nas:/data/</code></td>
-            <td><code>/mnt/backup/</code></td>
+            <td><code>user@host1:/data/</code></td>
+            <td><code>/mnt/nas/backup/</code></td>
           </tr>
           <tr>
             <td>Remote → remote</td>

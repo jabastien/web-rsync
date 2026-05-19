@@ -112,7 +112,7 @@ A **Task** defines one rsync job: source, destination, options, and an optional 
 1. Go to **Tasks → New Task**
 2. Fill in:
    - **Name** — a unique label for this task
-   - **Source Path** — path on the web-RSync server (`/mnt/source/`) or remote SSH path (`user@host:/path/`). Not your browser's machine.
+   - **Source Path** — path on the web-RSync server (`/mnt/nas/source/`) or remote SSH path (`user@host:/path/`). Not your browser's machine.
    - **Destination Path** — same format; both sides can be remote (see [Remote → Remote](#remote--remote-ssh--ssh))
    - **rsync Options** — raw flags passed directly to rsync (default: `-avz`). Use the **Browse flags** panel to explore available options.
    - **Schedule** — optional cron expression (e.g. `0 2 * * *` = every day at 02:00). Leave blank for manual-only. A human-readable translation appears as you type.
@@ -130,10 +130,10 @@ A bare path starting with `/` is **local to the web-RSync server** (inside the D
 
 | Scenario | Source example | Destination example |
 |----------|---------------|-------------------|
-| Server → server *(both paths are on the container's filesystem)* | `/mnt/source/` | `/mnt/backup/` |
-| Server → remote (SSH) | `/mnt/source/` | `alain@nas:/backup/` |
-| Remote → server (SSH) | `alain@nas:/data/` | `/mnt/backup/` |
-| Remote → remote (SSH) | `alain@host1:/data/` | `alain@host2:/backup/` |
+| Server → server *(both paths are on the container's filesystem)* | `/mnt/nas/source/` | `/mnt/nas/backup/` |
+| Server → remote (SSH) | `/mnt/nas/source/` | `user@host2:/backup/` |
+| Remote → server (SSH) | `user@host1:/data/` | `/mnt/nas/backup/` |
+| Remote → remote (SSH) | `user@host1:/data/` | `user@host2:/backup/` |
 
 > Trailing slash on the source matters to rsync: `src/` copies the *contents*; `src` copies the *directory itself*.
 
