@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { useJobsStore } from "../stores/jobs";
 import LogViewer from "../components/LogViewer.vue";
@@ -9,10 +9,36 @@ const store = useJobsStore();
 const route = useRoute();
 const selectedRun = ref<number | null>(route.params.id ? Number(route.params.id) : null);
 const showPurgeConfirm = ref(false);
-
-onMounted(() => store.fetchAll());
+const loaded = ref(false);
 
 const completedCount = computed(() => store.runs.filter(r => r.status !== "running").length);
+const hasRunning = computed(() => store.runs.some(r => r.status === "running"));
+const selectedStatus = computed(() => store.runs.find(r => r.id === selectedRun.value)?.status ?? null);
+
+// Poll every 3 s while any run is still running so status badges stay fresh
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+function startPolling() {
+  if (pollTimer !== null) return;
+  pollTimer = setInterval(() => store.fetchAll(), 3000);
+}
+
+function stopPolling() {
+  if (pollTimer !== null) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+watch(hasRunning, (val) => { val ? startPolling() : stopPolling(); });
+
+onMounted(async () => {
+  await store.fetchAll();   // resolve before LogViewer mounts so `live` prop is correct
+  loaded.value = true;
+  if (hasRunning.value) startPolling();
+});
+
+onUnmounted(() => stopPolling());
 
 function statusClass(s: string) {
   return `badge badge-${s}`;
@@ -22,12 +48,16 @@ function select(id: number) {
   selectedRun.value = id;
 }
 
+// Called by LogViewer when SSE stream closes — refresh to get final status
+async function onRunDone() {
+  await store.fetchAll();
+}
+
 async function confirmPurge() {
   await store.purge();
   showPurgeConfirm.value = false;
-  if (selectedRun.value !== null) {
-    const stillExists = store.runs.some(r => r.id === selectedRun.value);
-    if (!stillExists) selectedRun.value = null;
+  if (selectedRun.value !== null && !store.runs.some(r => r.id === selectedRun.value)) {
+    selectedRun.value = null;
   }
 }
 </script>
@@ -67,10 +97,20 @@ async function confirmPurge() {
       </div>
 
       <div>
-        <div class="card" v-if="selectedRun">
-          <h3 style="margin-top:0;font-size:14px">Log — Run #{{ selectedRun }}</h3>
-          <LogViewer :key="selectedRun" :runId="selectedRun"
-            :live="store.runs.find(r=>r.id===selectedRun)?.status === 'running'" />
+        <div class="card" v-if="selectedRun && loaded">
+          <h3 style="margin-top:0;font-size:14px">
+            Log — Run #{{ selectedRun }}
+            <span v-if="selectedStatus" :class="`badge badge-${selectedStatus}`" style="margin-left:8px;font-weight:400;font-size:11px">{{ selectedStatus }}</span>
+          </h3>
+          <LogViewer
+            :key="selectedRun"
+            :runId="selectedRun"
+            :live="selectedStatus === 'running'"
+            @done="onRunDone"
+          />
+        </div>
+        <div class="card" v-else-if="!loaded" style="color:#9ca3af;text-align:center;padding:40px">
+          Loading…
         </div>
         <div class="card" v-else style="color:#9ca3af;text-align:center;padding:40px">
           Select a run to view its log

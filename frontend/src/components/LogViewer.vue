@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { getJobLog } from "../api/client";
 
 const props = defineProps<{ runId: number; live?: boolean }>();
+const emit = defineEmits<{ done: [] }>();
 
 const lines = ref<string[]>([]);
 const done = ref(false);
@@ -27,10 +28,12 @@ function startStream() {
     lines.value.push(`\n--- finished: ${e.data} ---`);
     done.value = true;
     es?.close();
+    emit("done");
   });
   es.onerror = () => {
     es?.close();
     done.value = true;
+    emit("done");
   };
 }
 
