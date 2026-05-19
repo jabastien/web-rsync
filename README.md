@@ -231,6 +231,8 @@ A **Host** is a remote SSH target. Registering a host lets web-RSync deploy its 
 
 Schedules use standard **5-field cron syntax**: `minute hour day month weekday`
 
+> Use **[crontab.guru](https://crontab.guru/)** to build and validate expressions interactively.
+
 | Expression | Meaning |
 |------------|---------|
 | `0 2 * * *` | Every day at 02:00 |

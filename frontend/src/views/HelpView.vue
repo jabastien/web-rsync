@@ -178,7 +178,11 @@
       </p>
 
       <h3>Scheduling</h3>
-      <p>Uses standard 5-field cron syntax: <code>minute hour day month weekday</code></p>
+      <p>
+        Uses standard 5-field cron syntax: <code>minute hour day month weekday</code>.
+        Use <a href="https://crontab.guru/" target="_blank" rel="noopener">crontab.guru</a>
+        to build and validate expressions interactively.
+      </p>
       <table>
         <thead><tr><th>Expression</th><th>Meaning</th></tr></thead>
         <tbody>

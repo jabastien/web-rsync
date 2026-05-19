@@ -345,6 +345,10 @@ function submit() {
     <div class="form-group">
       <label>Schedule (cron)</label>
       <input v-model="form.schedule" placeholder="0 2 * * * — leave blank for manual" />
+      <div class="hint">
+        5-field cron syntax. Leave blank for manual-only.
+        <a href="https://crontab.guru/" target="_blank" rel="noopener">crontab.guru</a> ↗
+      </div>
       <div class="hint" v-if="form.schedule">{{ cronHint(form.schedule) }}</div>
     </div>
     <div class="form-group">
