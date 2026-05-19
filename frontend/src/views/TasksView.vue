@@ -10,6 +10,18 @@ const store = useTasksStore();
 const router = useRouter();
 
 const pendingDelete = ref<{ id: number; name: string } | null>(null);
+const pathTooltip = ref<{ text: string; x: number; y: number } | null>(null);
+
+function showPathTooltip(event: MouseEvent, text: string) {
+  const el = event.currentTarget as HTMLElement;
+  if (el.scrollWidth <= el.clientWidth) return;
+  const r = el.getBoundingClientRect();
+  pathTooltip.value = { text, x: r.left + window.scrollX, y: r.bottom + window.scrollY + 6 };
+}
+
+function hidePathTooltip() {
+  pathTooltip.value = null;
+}
 
 onMounted(() => store.fetchAll());
 
@@ -57,8 +69,12 @@ async function confirmDelete() {
           <template v-for="task in store.tasks" :key="task.id">
             <tr class="data-row">
               <td><strong>{{ task.name }}</strong></td>
-              <td class="path-cell"><code>{{ task.source_path }}</code></td>
-              <td class="path-cell"><code>{{ task.dest_path }}</code></td>
+              <td class="path-cell"
+                @mouseenter="showPathTooltip($event, task.source_path)"
+                @mouseleave="hidePathTooltip"><code>{{ task.source_path }}</code></td>
+              <td class="path-cell"
+                @mouseenter="showPathTooltip($event, task.dest_path)"
+                @mouseleave="hidePathTooltip"><code>{{ task.dest_path }}</code></td>
               <td><ScheduleBadge :schedule="task.schedule" /></td>
               <td>
                 <input type="checkbox" :checked="task.enabled"
@@ -94,6 +110,14 @@ async function confirmDelete() {
     @confirm="confirmDelete"
     @cancel="pendingDelete = null"
   />
+
+  <Teleport to="body">
+    <div
+      v-if="pathTooltip"
+      class="path-tooltip"
+      :style="{ top: pathTooltip.y + 'px', left: pathTooltip.x + 'px' }"
+    >{{ pathTooltip.text }}</div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -118,4 +142,23 @@ async function confirmDelete() {
 
 .actions-row button,
 .actions-row a { margin-right: 4px; }
+</style>
+
+<style>
+.path-tooltip {
+  position: absolute;
+  z-index: 9999;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-family: "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  max-width: min(640px, calc(100vw - 24px));
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 </style>
