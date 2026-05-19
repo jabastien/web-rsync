@@ -2,11 +2,13 @@
 import { ref, onMounted } from "vue";
 import { useHostsStore } from "../stores/hosts";
 import { getSshKeys, deployKey } from "../api/client";
+import ConfirmModal from "../components/ConfirmModal.vue";
 
 const store = useHostsStore();
 const publicKey = ref("");
 const deployModal = ref<{ hostId: number; password: string } | null>(null);
 const deployError = ref("");
+const pendingDelete = ref<{ id: number; name: string } | null>(null);
 
 onMounted(async () => {
   await store.fetchAll();
@@ -28,6 +30,11 @@ async function submitDeploy() {
   } catch (e: any) {
     deployError.value = e.response?.data?.detail ?? e.message;
   }
+}
+async function confirmDelete() {
+  if (!pendingDelete.value) return;
+  await store.remove(pendingDelete.value.id);
+  pendingDelete.value = null;
 }
 </script>
 
@@ -68,7 +75,7 @@ async function submitDeploy() {
                 <RouterLink :to="`/hosts/${host.id}/edit`">
                   <button class="btn-secondary btn-sm">Edit</button>
                 </RouterLink>
-                <button class="btn-danger btn-sm" @click="store.remove(host.id)">Del</button>
+                <button class="btn-danger btn-sm" @click="pendingDelete = { id: host.id, name: host.name }">Del</button>
               </td>
             </tr>
           </template>
@@ -100,6 +107,14 @@ async function submitDeploy() {
       </div>
     </div>
   </div>
+
+  <ConfirmModal
+    v-if="pendingDelete"
+    title="Delete Host"
+    :message="`Delete host '${pendingDelete.name}'? This cannot be undone.`"
+    @confirm="confirmDelete"
+    @cancel="pendingDelete = null"
+  />
 </template>
 
 <style scoped>

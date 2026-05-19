@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useTasksStore } from "../stores/tasks";
 import { runTask, dryRunTask, cloneTask } from "../api/client";
 import ScheduleBadge from "../components/ScheduleBadge.vue";
+import ConfirmModal from "../components/ConfirmModal.vue";
 
 const store = useTasksStore();
 const router = useRouter();
+
+const pendingDelete = ref<{ id: number; name: string } | null>(null);
 
 onMounted(() => store.fetchAll());
 
@@ -21,6 +24,11 @@ async function dry(id: number) {
 async function clone(id: number) {
   await cloneTask(id);
   store.fetchAll();
+}
+async function confirmDelete() {
+  if (!pendingDelete.value) return;
+  await store.remove(pendingDelete.value.id);
+  pendingDelete.value = null;
 }
 </script>
 
@@ -65,7 +73,7 @@ async function clone(id: number) {
                   <button class="btn-secondary btn-sm">Edit</button>
                 </RouterLink>
                 <button class="btn-secondary btn-sm" @click="clone(task.id)">Clone</button>
-                <button class="btn-danger btn-sm" @click="store.remove(task.id)">Del</button>
+                <button class="btn-danger btn-sm" @click="pendingDelete = { id: task.id, name: task.name }">Del</button>
               </td>
             </tr>
           </template>
@@ -78,6 +86,14 @@ async function clone(id: number) {
       </table>
     </div>
   </div>
+
+  <ConfirmModal
+    v-if="pendingDelete"
+    title="Delete Task"
+    :message="`Delete task '${pendingDelete.name}'? This cannot be undone.`"
+    @confirm="confirmDelete"
+    @cancel="pendingDelete = null"
+  />
 </template>
 
 <style scoped>
