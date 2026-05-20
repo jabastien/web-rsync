@@ -112,6 +112,100 @@ cd frontend && npm run build && cd .. && /docker/web-rsync/rebuild.sh
 
 ---
 
+## Native Debian LXC (no Docker)
+
+Run web-RSync directly under systemd — no container overhead.
+
+### 1 — Install system packages
+
+```bash
+apt update && apt install -y git python3 python3-pip python3-venv curl rsync openssh-client
+
+# uv (Python package manager)
+curl -Ls https://astral.sh/uv/install.sh | sh
+source "$HOME/.local/bin/env"   # or open a new shell
+
+# Node.js 22 LTS (only needed for the one-time frontend build)
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
+```
+
+### 2 — Clone and build
+
+```bash
+git clone https://gitea.vertieres.net/alain/web-RSync.git /opt/web-rsync
+cd /opt/web-rsync
+
+# Build Vue frontend → backend/static/
+cd frontend && npm install && npm run build && cd ..
+
+# Python virtualenv + dependencies
+cd backend
+uv venv
+uv pip install -r pyproject.toml
+cd ..
+```
+
+### 3 — Configure
+
+```bash
+mkdir -p /opt/web-rsync/data
+cp .env.example /opt/web-rsync/backend/.env
+```
+
+Edit `/opt/web-rsync/backend/.env`:
+
+```env
+DATA_DIR=/opt/web-rsync/data
+MAX_CONCURRENT_JOBS=3
+```
+
+### 4 — Systemd service
+
+Create `/etc/systemd/system/web-rsync.service`:
+
+```ini
+[Unit]
+Description=web-RSync
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/web-rsync/backend
+EnvironmentFile=/opt/web-rsync/backend/.env
+ExecStart=/opt/web-rsync/backend/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable --now web-rsync
+systemctl status web-rsync
+```
+
+### 5 — Verify
+
+```bash
+curl http://localhost:8000/api/system/health
+# → {"status":"ok"}
+```
+
+Open `http://<lxc-ip>:8000` in a browser.
+
+### Re-deploying after code changes
+
+```bash
+cd /opt/web-rsync
+git pull
+cd frontend && npm run build && cd ..
+systemctl restart web-rsync
+```
+
+---
+
 ## Quick Start (dev)
 
 ```bash
