@@ -255,6 +255,20 @@ web-RSync/
 
 ---
 
+### Phase 10 — Documentation: Native Debian LXC Deployment ✓
+
+- Added **"Native Debian LXC (no Docker)"** section to README covering the full native deployment path:
+  - System package installation (`apt`): git, python3, curl, rsync, openssh-client
+  - `uv` install via install script
+  - Node.js 22 LTS via NodeSource (one-time frontend build only)
+  - Clone to `/opt/web-rsync/`, build Vue frontend → `backend/static/`
+  - Python venv + `uv pip install -r pyproject.toml`
+  - `.env` configuration with `DATA_DIR=/opt/web-rsync/data`
+  - systemd unit (`/etc/systemd/system/web-rsync.service`) with correct `WorkingDirectory=/opt/web-rsync/backend` and `EnvironmentFile`
+  - Re-deploy one-liner: `git pull` + `npm run build` + `systemctl restart web-rsync`
+
+---
+
 ## Verification
 
 1. `./run.sh` — starts uvicorn; hit `GET /api/system/health` → `{"status": "ok"}`
