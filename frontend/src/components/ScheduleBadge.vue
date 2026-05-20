@@ -14,7 +14,20 @@ function humanize(cron: string): string {
 
 <template>
   <span v-if="schedule" class="badge badge-scheduled" :title="humanize(schedule)">
-    {{ schedule }}
+    <span class="mdi mdi-calendar-clock"></span>{{ schedule }}
   </span>
-  <span v-else class="badge" style="background:#f3f4f6;color:#6b7280">manual</span>
+  <span v-else class="badge badge-manual">
+    <span class="mdi mdi-hand-pointing-right"></span>manual
+  </span>
 </template>
+
+<style scoped>
+.badge-manual {
+  background: var(--badge-manual-bg);
+  color: var(--badge-manual-text);
+}
+.badge .mdi {
+  font-size: 11px;
+  margin-right: 2px;
+}
+</style>

@@ -1,11 +1,101 @@
+/* ─── Theme variables ────────────────────────────────────────────── */
+/* Dark mode is the default (:root). Light mode applied via [data-theme="light"]. */
+
+:root {
+  --bg:                  #0f172a;
+  --surface:             #1e293b;
+  --surface-alt:         #162032;
+  --border:              #334155;
+  --border-input:        #475569;
+  --text:                #e2e8f0;
+  --text-muted:          #94a3b8;
+  --text-faint:          #64748b;
+  --text-strong:         #f8fafc;
+  --text-code:           #93c5fd;
+  --primary:             #60a5fa;
+  --primary-btn:         #2563eb;
+  --primary-btn-hover:   #1d4ed8;
+  --danger-btn:          #dc2626;
+  --danger-btn-hover:    #b91c1c;
+  --secondary-btn:       #334155;
+  --secondary-btn-hover: #475569;
+  --secondary-btn-text:  #e2e8f0;
+  --sidebar-bg:          #0d1829;
+  --sidebar-text:        #94a3b8;
+  --sidebar-hover:       #1e293b;
+  --sidebar-active-bg:   rgba(96,165,250,.14);
+  --sidebar-active-text: #60a5fa;
+  --sidebar-border:      #1e293b;
+  --badge-success-bg:    #14532d; --badge-success-text: #86efac;
+  --badge-failed-bg:     #7f1d1d; --badge-failed-text:  #fca5a5;
+  --badge-running-bg:    #1e3a5f; --badge-running-text: #93c5fd;
+  --badge-sched-bg:      #451a03; --badge-sched-text:   #fcd34d;
+  --badge-manual-bg:     #1e293b; --badge-manual-text:  #94a3b8;
+  --code-bg:             #0a1020;
+  --note-bg:             #1a1200;
+  --note-border:         #92400e;
+  --log-bg:              #060d1a;
+  --log-text:            #94a3b8;
+  --row-hover:           rgba(96,165,250,.05);
+  --row-selected:        rgba(96,165,250,.14);
+  --modal-bg:            #1e293b;
+  --modal-overlay:       rgba(0,0,0,.65);
+  --success-icon-bg:     #14532d;
+  --success-icon-text:   #86efac;
+}
+
+[data-theme="light"] {
+  --bg:                  #f1f5f9;
+  --surface:             #ffffff;
+  --surface-alt:         #f9fafb;
+  --border:              #e5e7eb;
+  --border-input:        #d1d5db;
+  --text:                #1e293b;
+  --text-muted:          #6b7280;
+  --text-faint:          #9ca3af;
+  --text-strong:         #111827;
+  --text-code:           #1d4ed8;
+  --primary:             #2563eb;
+  --primary-btn:         #2563eb;
+  --primary-btn-hover:   #1d4ed8;
+  --danger-btn:          #dc2626;
+  --danger-btn-hover:    #b91c1c;
+  --secondary-btn:       #e5e7eb;
+  --secondary-btn-hover: #d1d5db;
+  --secondary-btn-text:  #374151;
+  --sidebar-bg:          #1e293b;
+  --sidebar-text:        #94a3b8;
+  --sidebar-hover:       #334155;
+  --sidebar-active-bg:   #334155;
+  --sidebar-active-text: #f1f5f9;
+  --sidebar-border:      #334155;
+  --badge-success-bg:    #dcfce7; --badge-success-text: #166534;
+  --badge-failed-bg:     #fee2e2; --badge-failed-text:  #991b1b;
+  --badge-running-bg:    #dbeafe; --badge-running-text: #1e40af;
+  --badge-sched-bg:      #fef9c3; --badge-sched-text:   #854d0e;
+  --badge-manual-bg:     #f3f4f6; --badge-manual-text:  #6b7280;
+  --code-bg:             #f3f4f6;
+  --note-bg:             #fffbeb;
+  --note-border:         #f59e0b;
+  --log-bg:              #0f172a;
+  --log-text:            #94a3b8;
+  --row-hover:           rgba(37,99,235,.04);
+  --row-selected:        #eff6ff;
+  --modal-bg:            #ffffff;
+  --modal-overlay:       rgba(0,0,0,.45);
+  --success-icon-bg:     #dcfce7;
+  --success-icon-text:   #16a34a;
+}
+
+/* ─── Reset & base ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
-  background: #f5f5f5;
-  color: #333;
+  background: var(--bg);
+  color: var(--text);
 }
 
 #app {
@@ -13,9 +103,10 @@ body {
   min-height: 100vh;
 }
 
-a { color: #2563eb; text-decoration: none; }
+a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* ─── Buttons ────────────────────────────────────────────────────── */
 button {
   cursor: pointer;
   border: none;
@@ -23,28 +114,49 @@ button {
   padding: 6px 14px;
   font-size: 13px;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.btn-primary { background: #2563eb; color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
-.btn-danger  { background: #dc2626; color: #fff; }
-.btn-danger:hover  { background: #b91c1c; }
-.btn-secondary { background: #e5e7eb; color: #374151; }
-.btn-secondary:hover { background: #d1d5db; }
-.btn-sm { padding: 3px 10px; font-size: 12px; }
+.btn-primary { background: var(--primary-btn); color: #fff; }
+.btn-primary:hover { background: var(--primary-btn-hover); }
 
+.btn-danger  { background: var(--danger-btn);  color: #fff; }
+.btn-danger:hover  { background: var(--danger-btn-hover); }
+
+.btn-secondary { background: var(--secondary-btn); color: var(--secondary-btn-text); }
+.btn-secondary:hover { background: var(--secondary-btn-hover); }
+
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { padding: 3px 8px; font-size: 12px; gap: 3px; }
+.btn-icon-only { padding: 4px 6px; }
+
+/* ─── Cards ──────────────────────────────────────────────────────── */
 .card {
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
   padding: 20px;
   margin-bottom: 16px;
 }
 
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
-th { font-weight: 600; background: #f9fafb; }
+/* ─── Tables ─────────────────────────────────────────────────────── */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+th {
+  font-weight: 600;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* ─── Badges ─────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -52,21 +164,119 @@ th { font-weight: 600; background: #f9fafb; }
   font-size: 11px;
   font-weight: 600;
 }
-.badge-success  { background: #dcfce7; color: #166534; }
-.badge-failed   { background: #fee2e2; color: #991b1b; }
-.badge-running  { background: #dbeafe; color: #1e40af; }
-.badge-scheduled { background: #fef9c3; color: #854d0e; }
+.badge-success  { background: var(--badge-success-bg); color: var(--badge-success-text); }
+.badge-failed   { background: var(--badge-failed-bg);  color: var(--badge-failed-text); }
+.badge-running  { background: var(--badge-running-bg); color: var(--badge-running-text); }
+.badge-scheduled { background: var(--badge-sched-bg);  color: var(--badge-sched-text); }
 
+/* ─── Forms ──────────────────────────────────────────────────────── */
 .form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-weight: 500; margin-bottom: 4px; }
+.form-group label { display: block; font-weight: 500; margin-bottom: 4px; color: var(--text); }
 .form-group input, .form-group select, .form-group textarea {
   width: 100%;
   padding: 7px 10px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
   font-size: 13px;
+  background: var(--surface-alt);
+  color: var(--text);
+  transition: border-color 0.15s;
 }
-.form-group .hint { font-size: 11px; color: #6b7280; margin-top: 3px; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(96,165,250,.15);
+}
+.form-group .hint { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+.form-group .hint code {
+  background: var(--code-bg);
+  color: var(--text-code);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+.form-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+  accent-color: var(--primary-btn);
+}
 
-.page { flex: 1; padding: 24px; max-width: 1100px; }
-.page-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+/* ─── Page layout ────────────────────────────────────────────────── */
+.page {
+  flex: 1;
+  padding: 24px;
+  max-width: 1100px;
+  min-width: 0;
+}
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text-strong);
+}
+
+/* ─── Code ───────────────────────────────────────────────────────── */
+code {
+  background: var(--code-bg);
+  color: var(--text-code);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  font-size: 0.9em;
+}
+pre code { background: none; padding: 0; }
+
+/* ─── Mobile top bar ─────────────────────────────────────────────── */
+.mobile-topbar {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 52px;
+  background: var(--sidebar-bg);
+  z-index: 50;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.topbar-hamburger,
+.topbar-theme-btn {
+  background: none;
+  border: none;
+  color: var(--sidebar-text);
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 13px;
+}
+.topbar-hamburger:hover,
+.topbar-theme-btn:hover { color: #f1f5f9; background: rgba(255,255,255,.08); }
+.topbar-hamburger .mdi,
+.topbar-theme-btn .mdi { font-size: 22px; }
+
+.topbar-brand {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+.topbar-brand .mdi { font-size: 20px; color: #60a5fa; }
+.topbar-theme-btn { margin-left: auto; }
+
+/* ─── Responsive breakpoints ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  #app {
+    padding-top: 52px;
+  }
+  .mobile-topbar { display: flex; }
+  .page {
+    padding: 16px;
+    max-width: 100%;
+  }
+}

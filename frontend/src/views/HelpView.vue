@@ -55,7 +55,7 @@
         <thead><tr><th>Scenario</th><th>Source example</th><th>Destination example</th></tr></thead>
         <tbody>
           <tr>
-            <td>Server → server<br><small style="color:#6b7280">(both paths local to the container)</small></td>
+            <td>Server → server<br><small class="small-muted">(both paths local to the container)</small></td>
             <td><code>/mnt/nas/source/</code></td>
             <td><code>/mnt/nas/backup/</code></td>
           </tr>
@@ -98,7 +98,7 @@
         Use the <strong>Browse flags</strong> panel in the task form to explore ~60 available flags.
       </p>
 
-      <p style="font-weight:600;margin-top:12px;margin-bottom:4px">Common sets</p>
+      <p class="subsection-label">Common sets</p>
       <table>
         <thead><tr><th>Use case</th><th>Options</th><th>Notes</th></tr></thead>
         <tbody>
@@ -109,7 +109,7 @@
         </tbody>
       </table>
 
-      <p style="font-weight:600;margin-top:12px;margin-bottom:4px">Homelab scenarios</p>
+      <p class="subsection-label">Homelab scenarios</p>
       <table>
         <thead><tr><th>Use case</th><th>Options</th><th>Notes</th></tr></thead>
         <tbody>
@@ -160,7 +160,6 @@
               Recursively sync only <code>.conf</code> files. The <code>--include='*/'</code> is required so rsync descends into
               subdirectories — without it, all directories are excluded before their contents are evaluated.
               The final <code>--exclude='*'</code> rejects everything not already included.
-              Useful for config-only backups across many service directories.
             </td>
           </tr>
           <tr>
@@ -169,43 +168,29 @@
             <td>
               Override permissions at the destination regardless of what the source has.
               <code>D</code> applies to directories, <code>F</code> to files.
-              Useful when syncing media to a NAS where Jellyfin or Plex requires specific read permissions,
-              or when source files are owned by a different user than the destination.
             </td>
           </tr>
           <tr>
             <td>Only recent files (hot backup)</td>
             <td><code>-avz --max-age=7</code></td>
-            <td>
-              Transfer only files modified within the last 7 days. Ideal for a frequent incremental job that
-              captures recent activity without re-syncing a large unchanged archive.
-              Value is in days; fractional days are not supported.
-            </td>
+            <td>Transfer only files modified within the last 7 days.</td>
           </tr>
           <tr>
             <td>Archive old files only</td>
             <td><code>-avz --min-age=90</code></td>
-            <td>
-              Transfer only files not modified in 90+ days. Useful for tiering cold data to long-term
-              storage on a NAS or off-site target. Combine with <code>--remove-source-files</code>
-              to implement a move-to-archive pattern (files are deleted from source after transfer).
-            </td>
+            <td>Transfer only files not modified in 90+ days.</td>
           </tr>
           <tr>
             <td>Protect files from --delete</td>
             <td><code>-avz --delete --filter='protect .env'</code></td>
             <td>
               Mirror with deletion but shield specific files from being removed at the destination.
-              <code>protect</code> is a <code>--filter</code> rule type that prevents rsync from deleting
-              a matching file even if it does not exist at the source.
-              Useful when <code>.env</code> or local config files exist only on the server side and must survive a sync.
-              Multiple rules: <code>--filter='protect *.env' --filter='protect *.secret'</code>.
             </td>
           </tr>
           <tr>
             <td>Resumable over unreliable links</td>
             <td><code>-avz --partial</code></td>
-            <td>Keeps partially transferred files so the next run continues from where it stopped — useful for large files over VPN or WAN</td>
+            <td>Keeps partially transferred files so the next run continues from where it stopped</td>
           </tr>
           <tr>
             <td>Live progress (large transfers)</td>
@@ -287,59 +272,81 @@
 
 <style scoped>
 .section { margin-bottom: 16px; }
+
 .section h2 {
   font-size: 16px;
   font-weight: 700;
   margin: 0 0 12px;
-  color: #1e293b;
-  border-bottom: 1px solid #e5e7eb;
+  color: var(--text-strong);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 6px;
 }
+
 .section h3 {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   margin: 16px 0 6px;
-  color: #374151;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
+
 .section p, .section li {
   font-size: 13px;
-  color: #4b5563;
+  color: var(--text-muted);
   line-height: 1.6;
   margin: 0 0 8px;
 }
+
+.section strong { color: var(--text); }
+
 .section ul, .section ol {
   padding-left: 20px;
   margin: 0 0 8px;
 }
+
 .section table {
   width: auto;
   margin: 8px 0 12px;
   font-size: 12px;
 }
+
 .section table th {
-  background: #f3f4f6;
-  font-weight: 600;
+  background: var(--surface-alt);
 }
+
 .section table th, .section table td {
   padding: 6px 12px;
 }
+
+.small-muted { color: var(--text-faint); }
+
 .note {
-  background: #fffbeb;
-  border-left: 3px solid #f59e0b;
+  background: var(--note-bg);
+  border-left: 3px solid var(--note-border);
   padding: 8px 12px !important;
   border-radius: 2px;
   margin: 8px 0 !important;
 }
+
 .code-block {
-  background: #f3f4f6;
+  background: var(--code-bg);
+  color: var(--text-muted);
   border-radius: 4px;
   padding: 10px 12px;
   font-size: 12px;
-  font-family: monospace;
+  font-family: "Fira Code", "Cascadia Code", ui-monospace, monospace;
   margin: 6px 0 10px;
   white-space: pre;
   overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+.subsection-label {
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  color: var(--text) !important;
 }
 </style>

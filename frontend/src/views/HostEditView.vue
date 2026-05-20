@@ -32,7 +32,9 @@ async function save(data: any) {
   <div class="page">
     <h1 class="page-title">{{ hostId ? "Edit Host" : "New Host" }}</h1>
     <div class="card">
-      <p v-if="error" style="color:red">{{ error }}</p>
+      <p v-if="error" style="color:var(--danger-btn);display:flex;align-items:center;gap:6px">
+        <span class="mdi mdi-alert-circle-outline"></span>{{ error }}
+      </p>
       <HostForm v-if="!hostId || initial" :initial="initial" @submit="save" />
     </div>
   </div>

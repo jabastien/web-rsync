@@ -53,14 +53,16 @@ onUnmounted(() => {
 <template>
   <div class="log-viewer" ref="container">
     <pre v-for="(line, i) in lines" :key="i">{{ line }}</pre>
-    <p v-if="!done && lines.length === 0" class="log-waiting">Waiting for output…</p>
+    <p v-if="!done && lines.length === 0" class="log-waiting">
+      <span class="mdi mdi-loading mdi-spin"></span> Waiting for output…
+    </p>
   </div>
 </template>
 
 <style scoped>
 .log-viewer {
-  background: #0f172a;
-  color: #94a3b8;
+  background: var(--log-bg);
+  color: var(--log-text);
   font-family: "Fira Code", "Cascadia Code", monospace;
   font-size: 12px;
   line-height: 1.5;
@@ -74,5 +76,12 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-all;
 }
-.log-waiting { color: #475569; font-style: italic; }
+.log-waiting {
+  color: var(--text-faint);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.log-waiting .mdi { font-size: 14px; }
 </style>

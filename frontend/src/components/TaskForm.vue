@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, ref, nextTick, onUnmounted } from "vue";
+import { reactive, ref, computed, onMounted, nextTick, onUnmounted } from "vue";
 import cronstrue from "cronstrue";
 import { previewTask } from "../api/client";
+import { useHostsStore } from "../stores/hosts";
+import type { Host } from "../stores/hosts";
 
 interface FormData {
   name: string;
-  source_path: string;
-  dest_path: string;
   rsync_options: string;
   exclude_patterns: string;
   include_patterns: string;
@@ -14,19 +14,58 @@ interface FormData {
   enabled: boolean;
 }
 
-const props = defineProps<{ initial?: Partial<FormData> }>();
-const emit = defineEmits<{ submit: [data: FormData] }>();
+const props = defineProps<{
+  initial?: Partial<FormData & { source_path: string; dest_path: string }>;
+}>();
+const emit = defineEmits<{ submit: [data: FormData & { source_path: string; dest_path: string }] }>();
 
 const form = reactive<FormData>({
   name: props.initial?.name ?? "",
-  source_path: props.initial?.source_path ?? "",
-  dest_path: props.initial?.dest_path ?? "",
   rsync_options: props.initial?.rsync_options ?? "-avz",
   exclude_patterns: props.initial?.exclude_patterns ?? "",
   include_patterns: props.initial?.include_patterns ?? "",
   schedule: props.initial?.schedule ?? "",
   enabled: props.initial?.enabled ?? true,
 });
+
+// ── Hosts + endpoint pickers ──────────────────────────────────────────────────
+const hostsStore = useHostsStore();
+const sourceHostId = ref<number | null>(null);
+const sourcePath = ref("");
+const destHostId = ref<number | null>(null);
+const destPath = ref("");
+
+function buildPath(hostId: number | null, path: string): string {
+  if (hostId === null) return path;
+  const h = hostsStore.hosts.find((h: Host) => h.id === hostId);
+  if (!h) return path;
+  return `${h.username}@${h.hostname}:${path}`;
+}
+
+function decomposePath(full: string): { hostId: number | null; path: string } {
+  for (const h of hostsStore.hosts) {
+    const prefix = `${h.username}@${h.hostname}:`;
+    if (full.startsWith(prefix)) return { hostId: h.id, path: full.slice(prefix.length) };
+  }
+  return { hostId: null, path: full };
+}
+
+onMounted(async () => {
+  await hostsStore.fetchAll();
+  if (props.initial?.source_path) {
+    const d = decomposePath(props.initial.source_path);
+    sourceHostId.value = d.hostId;
+    sourcePath.value = d.path;
+  }
+  if (props.initial?.dest_path) {
+    const d = decomposePath(props.initial.dest_path);
+    destHostId.value = d.hostId;
+    destPath.value = d.path;
+  }
+});
+
+const computedSourcePath = computed(() => buildPath(sourceHostId.value, sourcePath.value));
+const computedDestPath   = computed(() => buildPath(destHostId.value, destPath.value));
 
 // ── Flag reference panel ──────────────────────────────────────────────────────
 const showFlags = ref(false);
@@ -163,14 +202,14 @@ function clearPreview() {
 }
 
 async function runPreview() {
-  if (!form.source_path || !form.dest_path) return;
+  if (!computedSourcePath.value || !computedDestPath.value) return;
   clearPreview();
   previewRunning.value = true;
 
   try {
     const res = await previewTask({
-      source_path: form.source_path,
-      dest_path: form.dest_path,
+      source_path: computedSourcePath.value,
+      dest_path: computedDestPath.value,
       rsync_options: form.rsync_options,
       exclude_patterns: form.exclude_patterns,
       include_patterns: form.include_patterns,
@@ -228,7 +267,12 @@ function cronHint(cron: string): string {
 }
 
 function submit() {
-  emit("submit", { ...form, schedule: form.schedule || null } as any);
+  emit("submit", {
+    ...form,
+    source_path: computedSourcePath.value,
+    dest_path: computedDestPath.value,
+    schedule: form.schedule || null,
+  } as any);
 }
 </script>
 
@@ -238,13 +282,53 @@ function submit() {
       <label>Name</label>
       <input v-model="form.name" required />
     </div>
+
+    <!-- ── Source ── -->
     <div class="form-group">
-      <label>Source Path</label>
-      <input v-model="form.source_path" placeholder="/path/to/source/" required />
+      <label>Source</label>
+      <div class="endpoint-row">
+        <select v-model="sourceHostId" class="host-select">
+          <option :value="null">
+            <span class="mdi mdi-server-outline"></span>Local — this server
+          </option>
+          <option v-for="h in hostsStore.hosts" :key="h.id" :value="h.id">
+            {{ h.name }} — {{ h.username }}@{{ h.hostname }}
+          </option>
+        </select>
+        <input
+          v-model="sourcePath"
+          class="path-input"
+          placeholder="/path/to/source/"
+          required
+        />
+      </div>
+      <div class="hint" v-if="sourceHostId !== null && sourcePath">
+        <span class="mdi mdi-arrow-right-thin"></span>
+        <code>{{ computedSourcePath }}</code>
+      </div>
     </div>
+
+    <!-- ── Destination ── -->
     <div class="form-group">
-      <label>Destination Path</label>
-      <input v-model="form.dest_path" placeholder="user@host:/path/to/dest/" required />
+      <label>Destination</label>
+      <div class="endpoint-row">
+        <select v-model="destHostId" class="host-select">
+          <option :value="null">Local — this server</option>
+          <option v-for="h in hostsStore.hosts" :key="h.id" :value="h.id">
+            {{ h.name }} — {{ h.username }}@{{ h.hostname }}
+          </option>
+        </select>
+        <input
+          v-model="destPath"
+          class="path-input"
+          placeholder="/path/to/dest/"
+          required
+        />
+      </div>
+      <div class="hint" v-if="destHostId !== null && destPath">
+        <span class="mdi mdi-arrow-right-thin"></span>
+        <code>{{ computedDestPath }}</code>
+      </div>
     </div>
 
     <div class="form-group">
@@ -253,7 +337,8 @@ function submit() {
       <div class="hint">
         Raw flags passed to rsync.
         <button type="button" class="flag-toggle" @click="showFlags = !showFlags">
-          {{ showFlags ? "Hide" : "Browse" }} flags ▾
+          <span class="mdi" :class="showFlags ? 'mdi-chevron-up' : 'mdi-chevron-down'"></span>
+          {{ showFlags ? "Hide" : "Browse" }} flags
         </button>
       </div>
     </div>
@@ -270,6 +355,7 @@ function submit() {
             :title="f.desc"
             @click="appendFlag(f.flag)"
           >
+            <span class="mdi mdi-plus-circle-outline flag-add-icon"></span>
             <code>{{ f.flag }}</code>
             <span class="flag-desc">{{ f.desc }}</span>
           </button>
@@ -304,28 +390,33 @@ function submit() {
     <!-- Dry-run preview -->
     <div class="preview-section">
       <div class="preview-header">
+        <span class="mdi mdi-play-circle-outline preview-icon"></span>
         <span class="preview-title">Dry-Run Test</span>
         <button
           type="button"
           class="btn-preview"
-          :disabled="previewRunning || !form.source_path || !form.dest_path"
+          :disabled="previewRunning || !sourcePath || !destPath"
           @click="runPreview"
         >
           <span v-if="previewRunning" class="spinner" />
-          {{ previewRunning ? "Running…" : "▶ Test Dry Run" }}
+          <span v-else class="mdi mdi-play"></span>
+          {{ previewRunning ? "Running…" : "Test Dry Run" }}
         </button>
         <button
           v-if="previewDone"
           type="button"
           class="btn-clear"
           @click="clearPreview"
-        >✕ Clear</button>
+        >
+          <span class="mdi mdi-close"></span>
+        </button>
         <span
           v-if="previewDone"
           class="preview-badge"
           :class="previewStatus === 'success' ? 'badge-ok' : 'badge-err'"
         >
-          {{ previewStatus === "success" ? "✓ OK" : "✗ Failed" }}
+          <span class="mdi" :class="previewStatus === 'success' ? 'mdi-check' : 'mdi-close'"></span>
+          {{ previewStatus === "success" ? "OK" : "Failed" }}
         </span>
       </div>
       <div class="preview-hint">
@@ -357,29 +448,81 @@ function submit() {
         Enabled
       </label>
     </div>
-    <button type="submit" class="btn-primary">Save</button>
+    <button type="submit" class="btn-primary">
+      <span class="mdi mdi-content-save"></span>Save
+    </button>
   </form>
 </template>
 
 <style scoped>
+/* ── Endpoint picker ── */
+.endpoint-row {
+  display: flex;
+  gap: 8px;
+}
+
+.host-select {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--surface-alt);
+  color: var(--text);
+  cursor: pointer;
+}
+.host-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(96,165,250,.15);
+}
+
+.path-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--surface-alt);
+  color: var(--text);
+  font-family: "Fira Code", "Cascadia Code", ui-monospace, monospace;
+}
+.path-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(96,165,250,.15);
+}
+
+@media (max-width: 600px) {
+  .endpoint-row { flex-direction: column; }
+  .host-select { width: 100%; }
+}
+
 /* ── Flag reference ── */
 .flag-toggle {
   background: none;
   border: none;
-  color: #2563eb;
+  color: var(--primary);
   font-size: 11px;
-  padding: 0;
-  margin-left: 8px;
+  padding: 0 4px;
+  margin-left: 6px;
   cursor: pointer;
-  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 3px;
 }
+.flag-toggle:hover { text-decoration: underline; }
+.flag-toggle .mdi { font-size: 13px; }
 
 .flag-reference {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 14px 16px;
   margin-bottom: 14px;
-  background: #f9fafb;
+  background: var(--surface-alt);
   max-height: 420px;
   overflow-y: auto;
 }
@@ -392,7 +535,7 @@ function submit() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #6b7280;
+  color: var(--text-faint);
   margin-bottom: 6px;
 }
 
@@ -401,9 +544,9 @@ function submit() {
 .flag-chip {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 5px 10px;
   text-align: left;
@@ -411,15 +554,20 @@ function submit() {
   transition: background 0.1s, border-color 0.1s;
   width: 100%;
 }
-.flag-chip:hover { background: #eff6ff; border-color: #93c5fd; }
+.flag-chip:hover { background: var(--row-selected); border-color: var(--primary); }
+.flag-add-icon { font-size: 13px; color: var(--text-faint); align-self: center; }
+.flag-chip:hover .flag-add-icon { color: var(--primary); }
+
 .flag-chip code {
   font-family: "Fira Code", "Cascadia Code", monospace;
   font-size: 12px;
-  color: #1d4ed8;
+  color: var(--text-code);
   white-space: nowrap;
   min-width: 160px;
+  background: none;
+  padding: 0;
 }
-.flag-desc { font-size: 12px; color: #6b7280; }
+.flag-desc { font-size: 12px; color: var(--text-muted); }
 
 /* ── Pattern filters ── */
 .patterns-row {
@@ -432,7 +580,7 @@ function submit() {
 .label-hint {
   font-weight: 400;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--text-faint);
   font-family: "Fira Code", "Cascadia Code", monospace;
 }
 
@@ -444,28 +592,41 @@ function submit() {
   line-height: 1.5;
   resize: vertical;
   box-sizing: border-box;
+  background: var(--surface-alt);
+  color: var(--text);
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  padding: 7px 10px;
+}
+.pattern-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(96,165,250,.15);
 }
 
 /* ── Dry-run preview ── */
 .preview-section {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 14px 16px;
   margin-bottom: 14px;
-  background: #f9fafb;
+  background: var(--surface-alt);
 }
 
 .preview-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
 }
+
+.preview-icon { font-size: 18px; color: var(--text-muted); }
 
 .preview-title {
   font-weight: 600;
   font-size: 13px;
-  color: #374151;
+  color: var(--text);
 }
 
 .btn-preview {
@@ -483,41 +644,44 @@ function submit() {
 }
 .btn-preview:hover:not(:disabled) { background: #0d6460; }
 .btn-preview:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-preview .mdi { font-size: 14px; }
 
 .btn-clear {
   background: none;
   border: none;
-  color: #9ca3af;
-  font-size: 12px;
+  color: var(--text-faint);
+  font-size: 14px;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
 }
-.btn-clear:hover { color: #374151; }
+.btn-clear:hover { color: var(--text); background: var(--border); }
+.btn-clear .mdi { font-size: 16px; }
 
 .preview-badge {
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
-.badge-ok  { background: #dcfce7; color: #166534; }
-.badge-err { background: #fee2e2; color: #991b1b; }
+.preview-badge .mdi { font-size: 12px; }
+.badge-ok  { background: var(--badge-success-bg); color: var(--badge-success-text); }
+.badge-err { background: var(--badge-failed-bg);  color: var(--badge-failed-text); }
 
 .preview-hint {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-faint);
   margin-bottom: 10px;
-}
-.preview-hint code {
-  font-family: monospace;
-  background: #e5e7eb;
-  padding: 1px 4px;
-  border-radius: 3px;
 }
 
 .preview-log {
-  background: #0f172a;
-  color: #94a3b8;
+  background: var(--log-bg);
+  color: var(--log-text);
   font-family: "Fira Code", "Cascadia Code", monospace;
   font-size: 12px;
   line-height: 1.5;
@@ -531,7 +695,7 @@ function submit() {
   white-space: pre-wrap;
   word-break: break-all;
 }
-.log-waiting { color: #475569; font-style: italic; }
+.log-waiting { color: var(--text-faint); font-style: italic; }
 
 /* ── Spinner ── */
 .spinner {
@@ -544,4 +708,8 @@ function submit() {
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 600px) {
+  .patterns-row { flex-direction: column; }
+}
 </style>
