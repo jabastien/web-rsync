@@ -8,6 +8,12 @@ RUN npm run build
 
 # Stage 2: Python runtime
 FROM python:3.12-slim
+LABEL org.opencontainers.image.title="web-rsync" \
+      org.opencontainers.image.description="Web UI for managing rsync jobs" \
+      org.opencontainers.image.url="https://hub.docker.com/r/jabastien/web-rsync" \
+      org.opencontainers.image.source="https://github.com/jabastien/web-rsync" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.authors="Alain"
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y rsync openssh-client && rm -rf /var/lib/apt/lists/*
