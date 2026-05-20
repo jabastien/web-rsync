@@ -40,3 +40,4 @@ export const purgeJobRuns = () => api.delete("/job-runs");
 // ---- System ----
 export const getHealth = () => api.get("/system/health");
 export const getSchedulerJobs = () => api.get("/system/scheduler-jobs");
+export const getMounts = () => api.get("/system/mounts");

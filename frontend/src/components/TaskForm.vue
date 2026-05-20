@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, nextTick, onUnmounted } from "vue";
 import cronstrue from "cronstrue";
-import { previewTask } from "../api/client";
+import { previewTask, getMounts } from "../api/client";
 import { useHostsStore } from "../stores/hosts";
 import type { Host } from "../stores/hosts";
+
+interface MountEntry {
+  mountpoint: string;
+  device: string;
+  fstype: string;
+  access: "rw" | "ro";
+}
 
 interface FormData {
   name: string;
@@ -256,6 +263,37 @@ function streamPreview(runId: number) {
 
 onUnmounted(() => previewEs?.close());
 
+// ── Mount points panel ────────────────────────────────────────────────────────
+const showMounts = ref(false);
+const mountsLoading = ref(false);
+const mountsLoaded = ref(false);
+const mountsList = ref<MountEntry[]>([]);
+const copiedMount = ref<string | null>(null);
+
+async function toggleMounts() {
+  showMounts.value = !showMounts.value;
+  if (showMounts.value && !mountsLoaded.value) {
+    mountsLoading.value = true;
+    try {
+      const res = await getMounts();
+      mountsList.value = res.data;
+      mountsLoaded.value = true;
+    } catch {
+      mountsList.value = [];
+    } finally {
+      mountsLoading.value = false;
+    }
+  }
+}
+
+async function copyMount(path: string) {
+  try {
+    await navigator.clipboard.writeText(path);
+    copiedMount.value = path;
+    setTimeout(() => { copiedMount.value = null; }, 1500);
+  } catch { /* clipboard unavailable */ }
+}
+
 // ── Cron hint ─────────────────────────────────────────────────────────────────
 function cronHint(cron: string): string {
   if (!cron) return "";
@@ -328,6 +366,32 @@ function submit() {
       <div class="hint" v-if="destHostId !== null && destPath">
         <span class="mdi mdi-arrow-right-thin"></span>
         <code>{{ computedDestPath }}</code>
+      </div>
+    </div>
+
+    <!-- ── Mount points panel ── -->
+    <div class="mounts-panel">
+      <button type="button" class="mounts-toggle" @click="toggleMounts">
+        <span class="mdi" :class="showMounts ? 'mdi-chevron-down' : 'mdi-chevron-right'"></span>
+        <span class="mdi mdi-harddisk" style="margin-right:4px"></span>
+        Available local paths
+        <span class="mdi mdi-loading mdi-spin" v-if="mountsLoading" style="margin-left:6px;font-size:14px"></span>
+      </button>
+      <div v-if="showMounts && !mountsLoading" class="mounts-list">
+        <div v-if="mountsList.length === 0" class="mounts-empty">No mount points found.</div>
+        <div
+          v-for="m in mountsList"
+          :key="m.mountpoint"
+          class="mount-row"
+          @click="copyMount(m.mountpoint)"
+          :title="`Click to copy: ${m.mountpoint}`"
+        >
+          <span class="mdi mdi-folder-outline mount-icon"></span>
+          <code class="mount-path">{{ m.mountpoint }}</code>
+          <span class="mount-badge" :class="m.access === 'rw' ? 'badge-rw' : 'badge-ro'">{{ m.access }}</span>
+          <span class="mount-fstype">{{ m.fstype }}</span>
+          <span class="mdi mount-copy-hint" :class="copiedMount === m.mountpoint ? 'mdi-check mount-copied' : 'mdi-content-copy'"></span>
+        </div>
       </div>
     </div>
 
@@ -712,4 +776,100 @@ function submit() {
 @media (max-width: 600px) {
   .patterns-row { flex-direction: column; }
 }
+
+/* ── Mount points panel ── */
+.mounts-panel {
+  margin-bottom: 14px;
+}
+
+.mounts-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.mounts-toggle:hover {
+  background: var(--surface-alt);
+  border-color: var(--primary);
+  color: var(--text);
+}
+.mounts-toggle .mdi { font-size: 15px; }
+
+.mounts-list {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+  overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.mounts-empty {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.mount-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+.mount-row:last-child { border-bottom: none; }
+.mount-row:hover { background: var(--row-hover); }
+
+.mount-icon { font-size: 14px; color: var(--text-faint); flex-shrink: 0; }
+
+.mount-path {
+  flex: 1;
+  font-family: "Fira Code", "Cascadia Code", monospace;
+  font-size: 12px;
+  color: var(--text-code);
+  background: none;
+  padding: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mount-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.badge-rw { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.badge-ro { background: rgba(148, 163, 184, 0.15); color: var(--text-faint); }
+
+.mount-fstype {
+  font-size: 11px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  min-width: 40px;
+}
+
+.mount-copy-hint {
+  font-size: 13px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+.mount-row:hover .mount-copy-hint { opacity: 1; }
+.mount-copied { color: #4ade80 !important; opacity: 1 !important; }
 </style>
