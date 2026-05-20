@@ -6,7 +6,7 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 
 ![Architecture Diagram](docs/architecture.png)
 
-> [Open in Excalidraw](https://excalidraw.com/#json=qptvNRHEOhVo4dtsWBhtq,BdGljb7rRpciXu4Sf5ynag)
+> [Open in Excalidraw](https://excalidraw.vertieres.net/#url=https://gitea.vertieres.net/alain/web-RSync/raw/branch/main/docs/architecture.excalidraw)
 
 ---
 
