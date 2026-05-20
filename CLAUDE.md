@@ -97,6 +97,12 @@ sqlite3 data/web_rsync.db
 - **Phase 10** — Docs: native Debian LXC deployment guide (systemd, no Docker)
 - **Phase 11** — Ed25519 SSH keys (replaced RSA-4096); legacy `id_rsa` detection with startup warning
 
+## Related Documents
+
+- `AGENT.md` — subagent orientation (layout, hard rules, deployment workflow)
+- `SKILL.md` — API usage guide for agents consuming web-RSync as a service
+- `PLAN.md` — full implementation history and design decisions
+
 ## Context & Notes
 
 **Read `context/lessons_learned.md` at the start of every session before doing any work.**
