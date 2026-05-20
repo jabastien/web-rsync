@@ -269,6 +269,16 @@ web-RSync/
 
 ---
 
+### Phase 11 — Ed25519 SSH Keys ✓
+
+- Replaced RSA-4096 key generation with Ed25519 (`paramiko.Ed25519Key.generate()`)
+- Key files renamed: `id_rsa` / `id_rsa.pub` → `id_ed25519` / `id_ed25519.pub`
+- `ssh_manager.py`: detects legacy `id_rsa` on startup and logs a warning if no `id_ed25519` exists; does not auto-delete
+- `rsync_runner.py`: SSH `-i` flag updated to reference `id_ed25519`
+- README, CLAUDE.md, and in-app Help updated to reflect new key paths and type
+
+---
+
 ## Verification
 
 1. `./run.sh` — starts uvicorn; hit `GET /api/system/health` → `{"status": "ok"}`

@@ -265,7 +265,7 @@
         <li>The server's public key is appended to <code>~/.ssh/authorized_keys</code> on the remote machine.</li>
         <li>rsync tasks to that host now authenticate without a password.</li>
       </ol>
-      <p>The server's public key is shown at the top of the Hosts page and lives at <code>data/ssh/id_rsa.pub</code>.</p>
+      <p>The server's public key is shown at the top of the Hosts page and lives at <code>data/ssh/id_ed25519.pub</code>.</p>
     </div>
 
     <div class="card section">

@@ -277,9 +277,9 @@ Copy `.env.example` to `.env` and adjust:
 data/
 ├── web_rsync.db      # SQLite database (WAL mode)
 ├── logs/             # One .log file per job run (named by run ID)
-└── ssh/              # Auto-generated RSA key pair (created on first start)
-    ├── id_rsa        # Private key — chmod 600, never leave the server
-    └── id_rsa.pub    # Public key — deployed to remote hosts
+└── ssh/              # Auto-generated Ed25519 key pair (created on first start)
+    ├── id_ed25519    # Private key — chmod 600, never leave the server
+    └── id_ed25519.pub  # Public key — deployed to remote hosts
 ```
 
 > **Note:** `data/` should be a persistent volume (Docker) or a directory outside your repo (dev). It is git-ignored except for the `.gitkeep` placeholder.
@@ -401,7 +401,7 @@ A **Host** is a remote SSH target. Registering a host lets web-RSync deploy its 
    - **Hostname / IP** — the address rsync/SSH will connect to
    - **Port** — SSH port (default 22)
    - **Username** — the SSH user on the remote machine
-   - **SSH Key Path** — leave blank to use the auto-generated server key (`data/ssh/id_rsa`)
+   - **SSH Key Path** — leave blank to use the auto-generated server key (`data/ssh/id_ed25519`)
 3. Click **Save**
 
 **To deploy the SSH public key to a host:**
@@ -417,7 +417,7 @@ A **Host** is a remote SSH target. Registering a host lets web-RSync deploy its 
 - Runs: `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '<pubkey>' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`
 - The password is never written to disk or logs
 
-**To view the server's public key** (to add manually to a host): it is shown at the top of the Hosts page. You can also find it at `data/ssh/id_rsa.pub`.
+**To view the server's public key** (to add manually to a host): it is shown at the top of the Hosts page. You can also find it at `data/ssh/id_ed25519.pub`.
 
 #### SSH key prerequisites on the remote host
 

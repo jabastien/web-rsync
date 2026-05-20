@@ -40,6 +40,7 @@ data/               # SQLite DB, SSH keys, logs, pattern files (gitignored)
 - **`shell=False`** everywhere in subprocess — paths come from user input.
 - **`task_id` nullable** on `JobRun` — supports ephemeral preview runs from `POST /api/tasks/preview`.
 - **Pattern files** written to `data/patterns/{task_id}_{exclude,include}.txt` before each run; `--include-from` injected before `--exclude-from` (order matters).
+- **Ed25519 keys** — generated at `data/ssh/id_ed25519` on first start. If a legacy `id_rsa` exists without `id_ed25519`, a warning is logged but the old key is not deleted automatically.
 - **Remote→Remote**: `ssh -A source_host "rsync … dest"` with agent forwarding — private key never leaves server.
 - **SPA routing**: `/assets` static mount + `/{full_path:path}` catch-all returning `index.html` (not `StaticFiles(html=True)`).
 - **SSE identity map bug**: `db.expire(run)` before each status check in `stream_log` — SQLAlchemy caches the initial `status="running"` without it.
@@ -94,6 +95,7 @@ sqlite3 data/web_rsync.db
 - **Phase 8** — Code review fixes (race conditions, security, deduplication)
 - **Phase 9** — UX hardening: path tooltip, ConfirmModal, HelpView, version badge, exclude/include patterns, Remote→Remote, purge history, live log polling, SPA deep-link fix
 - **Phase 10** — Docs: native Debian LXC deployment guide (systemd, no Docker)
+- **Phase 11** — Ed25519 SSH keys (replaced RSA-4096); legacy `id_rsa` detection with startup warning
 
 ## Context & Notes
 
