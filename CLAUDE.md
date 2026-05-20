@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Web-based rsync job manager — replacement for the unmaintained [websync](https://github.com/jabastien/websync). Schedule and monitor rsync jobs via a browser UI with SSH key management and real-time log streaming.
+Web-based rsync job manager — replacement for the unmaintained [websync](https://github.com/furier/websync). Schedule and monitor rsync jobs via a browser UI with SSH key management and real-time log streaming.
 
 ## Stack
 

@@ -1,6 +1,6 @@
 # web-RSync
 
-A web UI for managing rsync tasks — replacement for the unmaintained [websync](https://github.com/jabastien/websync) project.
+A web UI for managing rsync tasks — replacement for the unmaintained [websync](https://github.com/furier/websync) project.
 
 ## Architecture
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-Replacing the unmaintained Node.js `websync` project (https://github.com/jabastien/websync) with a modern Python-based equivalent. websync is a web UI for managing rsync tasks: create/schedule/run rsync jobs, manage SSH hosts, and view real-time execution logs. The original project is dead and Node.js-based; the rebuild uses FastAPI + SQLite + Vue 3 + Docker.
+Replacing the unmaintained Node.js `websync` project (https://github.com/furier/websync) with a modern Python-based equivalent. websync is a web UI for managing rsync tasks: create/schedule/run rsync jobs, manage SSH hosts, and view real-time execution logs. The original project is dead and Node.js-based; the rebuild uses FastAPI + SQLite + Vue 3 + Docker.
 
 ---
 
