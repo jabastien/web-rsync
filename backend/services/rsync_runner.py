@@ -38,7 +38,7 @@ def _parse_remote(path: str) -> tuple[str, str]:
 
 def _build_cmd(source_path: str, dest_path: str, options: list[str]) -> list[str]:
     """Build the rsync (or ssh+rsync) command for any source/dest combination."""
-    ssh_key = settings.ssh_dir / "id_rsa"
+    ssh_key = settings.ssh_dir / "id_ed25519"
 
     if _is_remote(source_path) and _is_remote(dest_path):
         # Remote→remote: SSH into source host and run rsync from there.

@@ -10,8 +10,9 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-KEY_PATH = settings.ssh_dir / "id_rsa"
-PUB_PATH = settings.ssh_dir / "id_rsa.pub"
+KEY_PATH = settings.ssh_dir / "id_ed25519"
+PUB_PATH = settings.ssh_dir / "id_ed25519.pub"
+_LEGACY_KEY = settings.ssh_dir / "id_rsa"
 
 _agent_pid: int | None = None
 
@@ -65,9 +66,15 @@ def stop_ssh_agent() -> None:
 
 def ensure_ssh_key():
     settings.ssh_dir.mkdir(parents=True, exist_ok=True)
+    if _LEGACY_KEY.exists() and not KEY_PATH.exists():
+        logger.warning(
+            "Legacy RSA key found at %s but no Ed25519 key exists. "
+            "Delete data/ssh/id_rsa* and restart to generate an Ed25519 key.",
+            _LEGACY_KEY,
+        )
     if not KEY_PATH.exists():
-        logger.info("Generating RSA key pair at %s", KEY_PATH)
-        key = paramiko.RSAKey.generate(4096)
+        logger.info("Generating Ed25519 key pair at %s", KEY_PATH)
+        key = paramiko.Ed25519Key.generate()
         key.write_private_key_file(str(KEY_PATH))
         with open(PUB_PATH, "w") as f:
             f.write(f"{key.get_name()} {key.get_base64()}\n")
@@ -87,7 +94,7 @@ def get_public_key() -> str:
 def list_ssh_keys() -> list[dict]:
     keys = []
     if PUB_PATH.exists():
-        keys.append({"name": "id_rsa", "public_key": PUB_PATH.read_text().strip()})
+        keys.append({"name": "id_ed25519", "public_key": PUB_PATH.read_text().strip()})
     return keys
 
 
