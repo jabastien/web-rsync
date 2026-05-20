@@ -74,10 +74,11 @@ def ensure_ssh_key():
         )
     if not KEY_PATH.exists():
         logger.info("Generating Ed25519 key pair at %s", KEY_PATH)
-        key = paramiko.Ed25519Key.generate()
-        key.write_private_key_file(str(KEY_PATH))
-        with open(PUB_PATH, "w") as f:
-            f.write(f"{key.get_name()} {key.get_base64()}\n")
+        subprocess.run(
+            ["ssh-keygen", "-t", "ed25519", "-N", "", "-f", str(KEY_PATH)],
+            check=True,
+            capture_output=True,
+        )
 
     current_mode = os.stat(KEY_PATH).st_mode
     if current_mode & 0o077:
