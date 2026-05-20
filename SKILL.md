@@ -26,6 +26,7 @@ Base URL: `http://<host>:8000` — no authentication required.
 | Get full log text | `GET /api/job-runs/{id}/log` |
 | Purge completed runs | `DELETE /api/job-runs` |
 | List scheduled jobs | `GET /api/system/scheduler-jobs` |
+| List container mount points | `GET /api/system/mounts` |
 
 Interactive Swagger UI: `http://<host>:8000/docs`
 
@@ -181,6 +182,29 @@ curl -s http://localhost:8000/api/system/scheduler-jobs
 ```
 
 Scheduling is automatic: saving a task with a non-null `schedule` and `enabled: true` registers it immediately. Deleting or disabling a task removes it from the scheduler in the same request.
+
+---
+
+## System / container info
+
+### List container mount points
+
+Useful for discovering what host paths are accessible inside the container before writing task paths.
+
+```bash
+curl -s http://localhost:8000/api/system/mounts | python3 -m json.tool
+```
+
+Response (example):
+
+```json
+[
+  {"mountpoint": "/data", "device": "zpool/subvol-110", "fstype": "zfs", "access": "rw"},
+  {"mountpoint": "/etc/hostname", "device": "zpool/subvol-110", "fstype": "zfs", "access": "rw"}
+]
+```
+
+Virtual filesystems (`proc`, `sysfs`, `tmpfs`, `cgroup`, etc.) and `/proc`/`/sys`/`/dev` prefixes are filtered out. The list is sorted by mountpoint.
 
 ---
 

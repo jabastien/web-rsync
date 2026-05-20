@@ -107,7 +107,7 @@ web-RSync/
 
 **Job Runs:** `GET /api/job-runs` (filterable), `GET /{id}`, `GET /{id}/log`, `GET /{id}/stream` (SSE)
 
-**System:** `GET /api/system/health`, `GET /api/system/scheduler-jobs`
+**System:** `GET /api/system/health`, `GET /api/system/scheduler-jobs`, `GET /api/system/mounts`
 
 ---
 
@@ -200,7 +200,7 @@ web-RSync/
 `fastapi`, `uvicorn[standard]`, `sqlalchemy`, `alembic`, `pydantic-settings`, `apscheduler`, `sse-starlette`, `paramiko`, `python-multipart`
 
 ## Frontend Dependencies (package.json)
-`vue`, `vue-router`, `pinia`, `axios`, `vite`, `@vitejs/plugin-vue`, `typescript`, `vue-tsc`, `cronstrue`
+`vue`, `vue-router`, `pinia`, `axios`, `vite`, `@vitejs/plugin-vue`, `typescript`, `vue-tsc`, `cronstrue`, `@mdi/font`
 
 ### Phase 8 — Code Review Fixes ✓
 
@@ -276,6 +276,44 @@ web-RSync/
 - `ssh_manager.py`: detects legacy `id_rsa` on startup and logs a warning if no `id_ed25519` exists; does not auto-delete
 - `rsync_runner.py`: SSH `-i` flag updated to reference `id_ed25519`
 - README, CLAUDE.md, and in-app Help updated to reflect new key paths and type
+
+---
+
+### Phase 12 — Dark Mode, MDI Icons & Mobile Layout ✓
+
+#### Theming
+- CSS custom properties on `:root` for dark mode defaults; `[data-theme="light"]` overrides. Applied to `document.documentElement` so all scoped styles inherit.
+- `src/composables/useTheme.ts` — module-level `ref()` singleton; `watchEffect` persists to `localStorage` under key `web-rsync-theme`.
+- Sidebar always uses a distinct dark shade (`--sidebar-bg`) regardless of active theme.
+- Theme toggle in both the desktop sidebar footer and the mobile top bar.
+
+#### Icons
+- Added `@mdi/font` 7.4.47; imported in `main.ts` before `style.css`.
+- MDI icons used throughout: navigation, action buttons (run, edit, clone, delete), status indicators, form controls, log viewer, schedule badge.
+- App icon: `mdi-archive-refresh` (SVG favicon + sidebar brand). Note: `mdi-archive-sync` does not exist in v7.4.
+
+#### Mobile layout
+- Fixed top bar (52px) shows hamburger + brand + theme toggle on screens ≤768px; hidden on desktop.
+- Sidebar slides in via CSS `left` transition; backdrop overlay with Vue `<Transition>`. Auto-closes on route change.
+- Tables wrapped in `.table-responsive` for horizontal scroll on narrow screens.
+- `JobHistoryView` two-column layout stacks at 900px.
+- `TaskForm` endpoint row stacks vertically at 600px.
+
+---
+
+### Phase 13 — Host Pickers & Mount Points Panel ✓
+
+#### Host pickers in task form
+- Source and destination each split into `[host dropdown] [path input]`.
+- Dropdown options: `Local — this server` (null) + all configured hosts as `Name — user@hostname`.
+- When a remote host is selected, a hint line shows the composed `user@hostname:/path`.
+- On submit, `buildPath()` composes `user@hostname:path` or bare path for the API.
+- On edit-load, `decomposePath()` in `onMounted` (after `hostsStore.fetchAll()`) parses `user@hostname:path` back to host ID + path. Graceful fallback: if the prefix matches no registered host, full string goes to path field with "Local" selected.
+
+#### Mount points panel (`GET /api/system/mounts`)
+- Backend: reads `/proc/mounts`, skips virtual filesystems (`proc`, `sysfs`, `tmpfs`, etc.) and `/proc` / `/sys` / `/dev` prefixes, returns sorted list of `{mountpoint, device, fstype, access}`.
+- Frontend: collapsible panel below the Destination field. Lazy-loaded on first expand (single API call). Each row: folder icon, path (monospace, click-to-copy), rw/ro badge, fstype. Copy hint icon appears on hover; green checkmark flashes for 1.5s on copy.
+- `getMounts()` added to `frontend/src/api/client.ts`.
 
 ---
 

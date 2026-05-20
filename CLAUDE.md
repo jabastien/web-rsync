@@ -7,7 +7,7 @@ Web-based rsync job manager — replacement for the unmaintained [websync](https
 ## Stack
 
 - **Backend:** FastAPI + SQLAlchemy + SQLite (`data/web_rsync.db`)
-- **Frontend:** Vue 3 + Vite + TypeScript (served from `frontend/`)
+- **Frontend:** Vue 3 + Vite + TypeScript + `@mdi/font` (served from `frontend/`)
 - **Scheduler:** APScheduler (in-process cron-style scheduling)
 - **SSH:** paramiko (`services/ssh_manager.py`)
 - **Deploy:** Docker (`docker-compose.yml`) or native systemd on Debian LXC
@@ -29,9 +29,11 @@ backend/
 frontend/
   src/
     views/          # Dashboard, TasksView, TaskEditView, HostsView, JobHistoryView, HelpView
-    components/     # TaskForm (flag panel, dry-run, pattern fields), LogViewer (SSE), ConfirmModal, ScheduleBadge
+    components/     # TaskForm (flag panel, dry-run, pattern fields, host pickers, mounts panel), LogViewer (SSE), ConfirmModal, ScheduleBadge
+    composables/    # useTheme.ts (dark/light toggle, localStorage persistence)
     stores/         # tasks.ts, hosts.ts, jobs.ts (purge)
-    api/client.ts   # Axios wrapper (previewTask, purgeJobRuns)
+    api/client.ts   # Axios wrapper (previewTask, purgeJobRuns, getMounts)
+    style.css       # CSS custom properties: :root = dark, [data-theme="light"] = light overrides
 data/               # SQLite DB, SSH keys, logs, pattern files (gitignored)
 ```
 
@@ -46,6 +48,9 @@ data/               # SQLite DB, SSH keys, logs, pattern files (gitignored)
 - **SSE identity map bug**: `db.expire(run)` before each status check in `stream_log` — SQLAlchemy caches the initial `status="running"` without it.
 - **Inline SQLite migration** in `main.py` lifespan: `ALTER TABLE tasks ADD COLUMN … DEFAULT ''` wrapped in try/except for idempotency.
 - **Deploy key via SFTP** (not `exec_command` + echo) — eliminates shell quoting risk.
+- **Theme singleton**: `useTheme.ts` holds state at module level (not inside `setup()`), ensuring all components share one toggle.
+- **Host picker decompose timing**: `decomposePath()` runs inside `onMounted` after `hostsStore.fetchAll()` — hosts must be loaded before parsing `user@hostname:path`.
+- **Hot-deploy pattern**: `docker cp backend/static <container>:/app/backend/` deploys frontend changes without a container restart. Python changes require `docker restart`.
 
 ## Commands
 
@@ -96,6 +101,8 @@ sqlite3 data/web_rsync.db
 - **Phase 9** — UX hardening: path tooltip, ConfirmModal, HelpView, version badge, exclude/include patterns, Remote→Remote, purge history, live log polling, SPA deep-link fix
 - **Phase 10** — Docs: native Debian LXC deployment guide (systemd, no Docker)
 - **Phase 11** — Ed25519 SSH keys (replaced RSA-4096); legacy `id_rsa` detection with startup warning
+- **Phase 12** — Dark mode (default, user-switchable), Material Design Icons, mobile-friendly layout (hamburger + slide-in sidebar)
+- **Phase 13** — Host pickers in task form (split host dropdown + path input); mount points panel (`GET /api/system/mounts`) with click-to-copy
 
 ## Related Documents
 

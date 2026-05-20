@@ -21,5 +21,11 @@ When AppArmor blocks `docker build`, use `docker cp backend/static <container>:/
 ## 2026-05-20 — @mdi/font v7.4: mdi-archive-sync does not exist
 `mdi-archive-sync` is not in @mdi/font 7.4.47. Use `mdi-archive-refresh` instead (the closest semantic equivalent). Always verify icon names with `grep "mdi-<name>" node_modules/@mdi/font/css/materialdesignicons.min.css`.
 
+## 2026-05-20 — Python backend changes require container restart; static files do not
+`docker cp backend/static <container>:/app/backend/` hot-swaps frontend with no restart — FastAPI reads static files from disk per request. Python file changes (routers, services, etc.) require `docker restart <container>` because uvicorn does not auto-reload in production mode.
+
+## 2026-05-20 — CORS_ORIGINS env var causes startup failure when set in host shell
+The `list[str]` pydantic-settings field for `cors_origins` expects JSON (`["...","..."]`). In the host shell, the `.env` value `CORS_ORIGINS=["..."]` may be bash-glob-expanded, causing `JSONDecodeError`. Inside the Docker container there is no `CORS_ORIGINS` env var set, so restart is safe. Only fails when launching uvicorn manually from the host shell with the env loaded.
+
 ## 2026-05-19 — Docker build fails in this Proxmox LXC (AppArmor)
 All Docker `RUN` steps fail with AppArmor profile errors. Root cause: the LXC container doesn't have AppArmor kernel support but Docker tries to load its default profile. Fix requires the Proxmox host to add `lxc.apparmor.profile = unconfined` to the LXC config (`/etc/pve/lxc/CTID.conf`) and restart the container. Workaround: run the backend directly via `.venv/bin/uvicorn` — the frontend is pre-built in `backend/static/`.

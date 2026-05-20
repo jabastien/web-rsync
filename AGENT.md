@@ -28,8 +28,10 @@ frontend/
   src/
     views/          # Dashboard, TasksView, TaskEditView, HostsView, JobHistoryView, HelpView
     components/     # TaskForm, LogViewer, ConfirmModal, ScheduleBadge
+    composables/    # useTheme.ts (dark/light toggle, localStorage persistence)
     stores/         # tasks.ts, hosts.ts, jobs.ts
-    api/client.ts   # Axios wrapper
+    api/client.ts   # Axios wrapper (includes getMounts)
+    style.css       # CSS custom properties: dark default, [data-theme="light"] overrides
 ```
 
 ---
@@ -79,6 +81,9 @@ docker logs web-rsync --tail=40
 - **`uv pip install -r pyproject.toml`** is correct syntax for uv. Do not change to `-e .` — hatchling is not configured.
 - **Docker `RUN` steps fail on this Proxmox LXC** (AppArmor). Always use `rebuild.sh`, never `docker compose up --build`.
 - **Frontend changes require a rebuild** — `backend/static/` is the served build output, not the source. Editing `.vue` files has no effect until `npm run build` is run and the container is rebuilt.
+- **Python backend changes require a container restart** — `docker cp` can hot-swap static files (no restart needed), but Python file changes need `docker restart <container>`.
+- **`mdi-archive-sync` does not exist in @mdi/font 7.4** — the correct icon is `mdi-archive-refresh`. Always verify icon names with `grep "mdi-<name>" node_modules/@mdi/font/css/materialdesignicons.min.css`.
+- **Theme state is a module-level singleton** — `useTheme.ts` holds `theme` as a module-level `ref()`. This means all component instances share the same state. Do not move it inside `setup()` or the toggle will not propagate globally.
 
 ---
 

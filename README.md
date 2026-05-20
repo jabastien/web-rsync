@@ -13,6 +13,11 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 ## Features
 
 - Create, schedule, and run rsync tasks via a web UI
+- **Dark mode by default** — user-switchable light/dark theme, preference persisted in localStorage
+- **Mobile-friendly** — responsive layout with hamburger menu and slide-in sidebar on small screens
+- **Material Design Icons** throughout — navigation, action buttons, status indicators
+- **Host picker in task form** — source and destination each have a dropdown for pre-configured SSH hosts; entering a path without a host means "local to this server"
+- **Mount point panel** — collapsible "Available local paths" panel in the task form lists container mount points with rw/ro badge and fstype; click any path to copy it to the clipboard
 - **Inline dry-run test** — validate paths and options before saving, with live log output
 - **rsync flag reference** — searchable flag panel with ~60 flags; click to append to options
 - **Exclude / include pattern editor** — per-task `--exclude-from` and `--include-from` pattern lists, managed as text fields (no manual file editing)
@@ -34,7 +39,8 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 | Scheduling | APScheduler |
 | SSH | paramiko |
 | Log streaming | SSE via sse-starlette |
-| Frontend | Vue 3 + Vite + Pinia + Vue Router |
+| Frontend | Vue 3 + Vite + TypeScript + Pinia + Vue Router |
+| Icons | Material Design Icons (`@mdi/font` 7.4) |
 | Deployment | Docker (multi-stage) |
 
 ---
@@ -306,8 +312,9 @@ A **Task** defines one rsync job: source, destination, options, and an optional 
 1. Go to **Tasks → New Task**
 2. Fill in:
    - **Name** — a unique label for this task
-   - **Source Path** — path on the web-RSync server (`/mnt/nas/source/`) or remote SSH path (`user@host:/path/`). Not your browser's machine.
-   - **Destination Path** — same format; both sides can be remote (see [Remote → Remote](#remote--remote-ssh--ssh))
+   - **Source** — pick a host from the dropdown (`Local — this server` or a pre-configured SSH host) then enter the path. Selecting a remote host shows the composed `user@hostname:/path` below the field as a hint.
+   - **Destination** — same format. Both source and destination can be remote (see [Remote → Remote](#remote--remote-ssh--ssh)).
+   - **Available local paths** — click this toggle to see the container's mount points with rw/ro status. Click any path to copy it to your clipboard.
    - **rsync Options** — raw flags passed directly to rsync (default: `-avz`). Use the **Browse flags** panel to explore available options. The field is not shell-processed — `$(date +%F)` will not expand.
    - **Include Patterns** (`--include-from`) — one pattern per line; included before excludes are evaluated
    - **Exclude Patterns** (`--exclude-from`) — one pattern per line; e.g. `*.tmp`, `node_modules/`
@@ -465,6 +472,7 @@ Full interactive docs available at `http://localhost:8000/docs` (Swagger UI).
 |--------|------|-------------|
 | GET | `/api/system/health` | Health check |
 | GET | `/api/system/scheduler-jobs` | List active scheduled jobs |
+| GET | `/api/system/mounts` | List container mount points (mountpoint, fstype, rw/ro) |
 | GET | `/api/tasks` | List all tasks |
 | POST | `/api/tasks` | Create task |
 | GET | `/api/tasks/{id}` | Get task |
