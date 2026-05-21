@@ -8,6 +8,7 @@ import ConfirmModal from "../components/ConfirmModal.vue";
 const store = useJobsStore();
 const route = useRoute();
 const selectedRun = ref<number | null>(route.params.id ? Number(route.params.id) : null);
+const logViewer = ref<InstanceType<typeof LogViewer> | null>(null);
 const showPurgeConfirm = ref(false);
 const loaded = ref(false);
 
@@ -105,8 +106,12 @@ async function confirmPurge() {
             <span class="mdi mdi-text-box-outline"></span>
             Log — Run #{{ selectedRun }}
             <span v-if="selectedStatus" :class="`badge badge-${selectedStatus}`" style="margin-left:8px;font-weight:400;font-size:11px">{{ selectedStatus }}</span>
+            <button class="download-btn" @click="logViewer?.downloadLog()" title="Download log">
+              <span class="mdi mdi-download"></span> Download
+            </button>
           </h3>
           <LogViewer
+            ref="logViewer"
             :key="selectedRun"
             :runId="selectedRun"
             :live="selectedStatus === 'running'"
@@ -164,6 +169,24 @@ async function confirmPurge() {
   gap: 6px;
 }
 .log-heading .mdi { font-size: 16px; color: var(--text-muted); }
+
+.download-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.download-btn .mdi { font-size: 13px; color: inherit; }
+.download-btn:hover { color: var(--primary); border-color: var(--primary); }
 
 .empty-row {
   text-align: center;

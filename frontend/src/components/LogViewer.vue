@@ -8,6 +8,8 @@ const emit = defineEmits<{ done: [] }>();
 const lines = ref<string[]>([]);
 const done = ref(false);
 const container = ref<HTMLElement | null>(null);
+
+defineExpose({ downloadLog: () => downloadLog() });
 let es: EventSource | null = null;
 
 async function loadStatic() {
@@ -62,61 +64,15 @@ function downloadLog() {
 </script>
 
 <template>
-  <div class="log-wrapper">
-    <div class="log-toolbar">
-      <button
-        class="download-btn"
-        @click="downloadLog"
-        :disabled="lines.length === 0"
-        title="Download log"
-      >
-        <span class="mdi mdi-download"></span> Download
-      </button>
-    </div>
-    <div class="log-viewer" ref="container">
-      <pre v-for="(line, i) in lines" :key="i">{{ line }}</pre>
-      <p v-if="!done && lines.length === 0" class="log-waiting">
-        <span class="mdi mdi-loading mdi-spin"></span> Waiting for output…
-      </p>
-    </div>
+  <div class="log-viewer" ref="container">
+    <pre v-for="(line, i) in lines" :key="i">{{ line }}</pre>
+    <p v-if="!done && lines.length === 0" class="log-waiting">
+      <span class="mdi mdi-loading mdi-spin"></span> Waiting for output…
+    </p>
   </div>
 </template>
 
 <style scoped>
-.log-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.log-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.download-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  border-radius: 4px;
-  padding: 4px 10px;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: color 0.12s, border-color 0.12s;
-}
-.download-btn .mdi { font-size: 14px; }
-.download-btn:hover:not(:disabled) {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-.download-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
 .log-viewer {
   background: var(--log-bg);
   color: var(--log-text);
