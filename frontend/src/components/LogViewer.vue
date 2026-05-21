@@ -63,14 +63,16 @@ function downloadLog() {
 
 <template>
   <div class="log-wrapper">
-    <button
-      class="download-btn"
-      @click="downloadLog"
-      :disabled="lines.length === 0"
-      title="Download log"
-    >
-      <span class="mdi mdi-download"></span>
-    </button>
+    <div class="log-toolbar">
+      <button
+        class="download-btn"
+        @click="downloadLog"
+        :disabled="lines.length === 0"
+        title="Download log"
+      >
+        <span class="mdi mdi-download"></span> Download
+      </button>
+    </div>
     <div class="log-viewer" ref="container">
       <pre v-for="(line, i) in lines" :key="i">{{ line }}</pre>
       <p v-if="!done && lines.length === 0" class="log-waiting">
@@ -82,27 +84,33 @@ function downloadLog() {
 
 <style scoped>
 .log-wrapper {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-toolbar {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .download-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
-  background: var(--card-bg);
+  background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 4px;
-  padding: 3px 7px;
+  padding: 4px 10px;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  transition: color 0.12s, background 0.12s;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.12s, border-color 0.12s;
 }
+.download-btn .mdi { font-size: 14px; }
 .download-btn:hover:not(:disabled) {
   color: var(--primary);
-  background: var(--row-hover);
+  border-color: var(--primary);
 }
 .download-btn:disabled {
   opacity: 0.35;
