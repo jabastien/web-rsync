@@ -1,10 +1,13 @@
 import logging
+import os
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 logger = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
+_tz = ZoneInfo(os.environ.get("TZ", "UTC"))
+scheduler = AsyncIOScheduler(timezone=_tz)
 
 
 def add_task_job(task_id: int, cron: str, run_fn):

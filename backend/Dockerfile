@@ -16,7 +16,7 @@ LABEL org.opencontainers.image.title="web-rsync" \
       org.opencontainers.image.authors="Alain"
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y rsync openssh-client curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y rsync openssh-client curl tzdata && rm -rf /var/lib/apt/lists/*
 
 COPY --from=frontend-builder /build/backend/static ./backend/static
 

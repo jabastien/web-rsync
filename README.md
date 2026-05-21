@@ -314,6 +314,7 @@ Copy `.env.example` to `.env` and adjust:
 |----------|---------|-------------|
 | `DATA_DIR` | `./data` | Root for DB, logs, and SSH keys |
 | `MAX_CONCURRENT_JOBS` | `3` | Max simultaneous rsync processes |
+| `TZ` | `UTC` | Container timezone; cron schedules are interpreted in this timezone (e.g. `Europe/Zurich`, `America/New_York`) |
 
 ## Data Layout
 
