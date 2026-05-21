@@ -71,6 +71,7 @@ services:
     environment:
       - DATA_DIR=/data
       - MAX_CONCURRENT_JOBS=3
+      - TZ=UTC                  # set to your timezone, e.g. Europe/Zurich
     restart: unless-stopped
 ```
 
@@ -297,6 +298,7 @@ services:
     environment:
       - DATA_DIR=/data
       - MAX_CONCURRENT_JOBS=3
+      - TZ=UTC                      # set to your timezone, e.g. Europe/Zurich
     security_opt:
       - apparmor=unconfined   # required on Proxmox LXC
     restart: unless-stopped

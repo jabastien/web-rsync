@@ -37,6 +37,7 @@ services:
     environment:
       - DATA_DIR=/data
       - MAX_CONCURRENT_JOBS=3
+      - TZ=UTC                  # set to your timezone, e.g. Europe/Zurich
     restart: unless-stopped
 ```
 
