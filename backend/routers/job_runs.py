@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..models.job_run import JobRun
@@ -12,16 +12,26 @@ from ..schemas.job_run import JobRunRead
 router = APIRouter(prefix="/api/job-runs", tags=["job-runs"])
 
 
+def _with_task(q):
+    return q.options(joinedload(JobRun.task))
+
+
+def _enrich(runs: list[JobRun]) -> list[JobRun]:
+    for run in runs:
+        run.task_name = run.task.name if run.task else None
+    return runs
+
+
 @router.get("", response_model=list[JobRunRead])
 def list_job_runs(
     task_id: int | None = Query(None),
     limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
-    q = db.query(JobRun).order_by(JobRun.started_at.desc())
+    q = _with_task(db.query(JobRun).order_by(JobRun.started_at.desc()))
     if task_id is not None:
         q = q.filter(JobRun.task_id == task_id)
-    return q.limit(limit).all()
+    return _enrich(q.limit(limit).all())
 
 
 @router.delete("", status_code=200)
@@ -42,9 +52,10 @@ def purge_job_runs(db: Session = Depends(get_db)):
 
 @router.get("/{run_id}", response_model=JobRunRead)
 def get_job_run(run_id: int, db: Session = Depends(get_db)):
-    run = db.get(JobRun, run_id)
+    run = _with_task(db.query(JobRun)).filter(JobRun.id == run_id).first()
     if not run:
         raise HTTPException(404, "Job run not found")
+    run.task_name = run.task.name if run.task else None
     return run
 
 

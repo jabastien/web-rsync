@@ -87,7 +87,7 @@ async function confirmPurge() {
                 :class="{ 'run-selected': selectedRun === run.id }"
                 @click="select(run.id)">
                 <td>{{ run.id }}</td>
-                <td>{{ run.task_id }}</td>
+                <td>{{ run.task_name ?? `#${run.task_id}` }}</td>
                 <td>{{ run.trigger }}</td>
                 <td><span :class="statusClass(run.status)">{{ run.status }}</span></td>
                 <td>{{ new Date(run.started_at).toLocaleString() }}</td>

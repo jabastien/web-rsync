@@ -4,7 +4,8 @@ import * as api from "../api/client";
 
 export interface JobRun {
   id: number;
-  task_id: number;
+  task_id: number | null;
+  task_name: string | null;
   trigger: string;
   started_at: string;
   finished_at: string | null;
