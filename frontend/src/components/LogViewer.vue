@@ -48,18 +48,67 @@ onMounted(() => {
 onUnmounted(() => {
   es?.close();
 });
+
+function downloadLog() {
+  const content = lines.value.join("\n");
+  const blob = new Blob([content], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `web-rsync-run-${props.runId}.log`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <template>
-  <div class="log-viewer" ref="container">
-    <pre v-for="(line, i) in lines" :key="i">{{ line }}</pre>
-    <p v-if="!done && lines.length === 0" class="log-waiting">
-      <span class="mdi mdi-loading mdi-spin"></span> Waiting for output…
-    </p>
+  <div class="log-wrapper">
+    <button
+      class="download-btn"
+      @click="downloadLog"
+      :disabled="lines.length === 0"
+      title="Download log"
+    >
+      <span class="mdi mdi-download"></span>
+    </button>
+    <div class="log-viewer" ref="container">
+      <pre v-for="(line, i) in lines" :key="i">{{ line }}</pre>
+      <p v-if="!done && lines.length === 0" class="log-waiting">
+        <span class="mdi mdi-loading mdi-spin"></span> Waiting for output…
+      </p>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.log-wrapper {
+  position: relative;
+}
+
+.download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 3px 7px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: color 0.12s, background 0.12s;
+}
+.download-btn:hover:not(:disabled) {
+  color: var(--primary);
+  background: var(--row-hover);
+}
+.download-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .log-viewer {
   background: var(--log-bg);
   color: var(--log-text);
