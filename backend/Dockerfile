@@ -1,6 +1,7 @@
 # Stage 1: Build Vue frontend
 FROM node:20-alpine AS frontend-builder
 ARG VITE_APP_VERSION
+ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 WORKDIR /build/frontend
 COPY frontend/package.json .
 RUN npm install
