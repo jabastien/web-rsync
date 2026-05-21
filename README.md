@@ -47,7 +47,52 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 
 ## Deploy on a New System
 
-### Prerequisites
+### Option A — Docker Hub (recommended, no clone needed)
+
+Pull the pre-built image directly from Docker Hub. Only Docker + Compose required.
+
+```bash
+mkdir -p /docker/web-rsync/data
+cd /docker/web-rsync
+```
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  web-rsync:
+    image: jabastien/web-rsync:latest
+    container_name: web-rsync
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data        # DB, SSH keys, logs — must be persistent
+      # - /mnt/nas:/mnt/nas # add host paths rsync needs to reach
+    environment:
+      - DATA_DIR=/data
+      - MAX_CONCURRENT_JOBS=3
+    restart: unless-stopped
+```
+
+```bash
+docker compose up -d
+curl http://localhost:8000/api/system/health
+# → {"status":"ok"}
+```
+
+Open `http://<host-ip>:8000`.
+
+To update to the latest image:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+---
+
+### Option B — Build from source
+
+**Prerequisites**
 
 | Requirement | Version |
 |-------------|---------|
@@ -55,29 +100,22 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 | git | any |
 | Node.js *(Proxmox LXC path only)* | 18+ |
 
-### 1 — Clone from Gitea
+**Clone**
 
 ```bash
+# From GitHub:
+git clone https://github.com/jabastien/web-rsync.git
+# Or from Gitea:
 git clone https://gitea.vertieres.net/alain/web-RSync.git
-cd web-RSync
+cd web-rsync
 ```
 
-### 2 — Create the data directory and config
+**Build and start**
+
+Normal Docker host:
 
 ```bash
-mkdir -p /docker/web-rsync/data
-cp .env.example /docker/web-rsync/.env   # edit if needed
-```
-
-Create `/docker/web-rsync/docker-compose.yml` (see [example below](#docker-composeyml-example)).
-
-### 3 — Build and start
-
-**Normal Docker host** (standard multi-stage build — Node + Python in one step):
-
-```bash
-cp docker-compose.yml /docker/web-rsync/docker-compose.yml   # or write your own
-docker compose -f /docker/web-rsync/docker-compose.yml up --build -d
+docker compose up --build -d
 ```
 
 **Proxmox LXC** (AppArmor blocks `docker build` RUN steps — use the container-commit workaround):
@@ -97,7 +135,7 @@ cp /docker/web-rsync/rebuild.sh /docker/web-rsync/rebuild.sh   # already present
 > chmod +x /docker/web-rsync/rebuild.sh
 > ```
 
-### 4 — Verify
+**Verify**
 
 ```bash
 curl http://localhost:8000/api/system/health
@@ -106,12 +144,12 @@ curl http://localhost:8000/api/system/health
 
 Open `http://<host-ip>:8000` in a browser.
 
-### Re-deploying after code changes
+**Re-deploying after code changes**
 
 ```bash
 git pull
 # Normal host:
-docker compose -f /docker/web-rsync/docker-compose.yml up --build -d
+docker compose up --build -d
 # Proxmox LXC:
 cd frontend && npm run build && cd .. && /docker/web-rsync/rebuild.sh
 ```
@@ -139,7 +177,7 @@ apt install -y nodejs
 ### 2 — Clone and build
 
 ```bash
-git clone https://gitea.vertieres.net/alain/web-RSync.git /opt/web-rsync
+git clone https://github.com/jabastien/web-rsync.git /opt/web-rsync
 cd /opt/web-rsync
 
 # Build Vue frontend → backend/static/
@@ -249,7 +287,7 @@ UI and API both served at `http://localhost:8000`. The Vue frontend is built int
 ```yaml
 services:
   web-rsync:
-    image: web-rsync:latest
+    image: jabastien/web-rsync:latest
     container_name: web-rsync
     ports:
       - "8000:8000"       # UI + API

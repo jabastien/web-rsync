@@ -1,12 +1,14 @@
 services:
   web-rsync:
-    build:
+    image: jabastien/web-rsync:latest
+    build:                              # optional: override image with a local build
       context: .
       dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/data
+      - ./data:/data        # DB, SSH keys, logs — must be persistent
+      # - /mnt/nas:/mnt/nas # add host paths rsync needs to reach
     environment:
       - DATA_DIR=/data
       - MAX_CONCURRENT_JOBS=3
