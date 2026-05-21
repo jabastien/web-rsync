@@ -16,7 +16,7 @@ LABEL org.opencontainers.image.title="web-rsync" \
       org.opencontainers.image.authors="Alain"
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y rsync openssh-client && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y rsync openssh-client curl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=frontend-builder /build/backend/static ./backend/static
 
@@ -27,5 +27,7 @@ COPY backend/ ./backend/
 
 ENV DATA_DIR=/data
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8000/api/system/health || exit 1
 
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
