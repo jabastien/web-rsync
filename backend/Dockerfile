@@ -27,7 +27,9 @@ RUN pip install uv && uv pip install --system -r pyproject.toml
 
 COPY backend/ ./backend/
 
+ARG APP_VERSION
 ENV DATA_DIR=/data
+ENV APP_VERSION=${APP_VERSION}
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8000/api/system/health || exit 1

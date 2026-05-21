@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -53,7 +54,7 @@ async def lifespan(app: FastAPI):
     ensure_ssh_key()
     ensure_ssh_agent()
     sched_svc.scheduler.start()
-    logger.info("web-RSync started")
+    logger.info("web-RSync %s started", os.environ.get("APP_VERSION", "dev"))
 
     yield
 
@@ -63,7 +64,7 @@ async def lifespan(app: FastAPI):
     logger.info("web-RSync stopped")
 
 
-app = FastAPI(title="web-RSync", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="web-RSync", version=os.environ.get("APP_VERSION", "dev"), lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
