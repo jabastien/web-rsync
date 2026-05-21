@@ -28,7 +28,7 @@ const navItems = [
       <span class="mdi" :class="sidebarOpen ? 'mdi-close' : 'mdi-menu'"></span>
     </button>
     <span class="topbar-brand">
-      <span class="mdi mdi-archive-refresh"></span>
+      <span class="mdi mdi-archive-sync"></span>
       web-RSync
     </span>
     <button class="topbar-theme-btn" @click="toggle" :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
@@ -44,7 +44,7 @@ const navItems = [
   <!-- Sidebar -->
   <nav class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
     <div class="sidebar-brand">
-      <span class="mdi mdi-archive-refresh brand-icon"></span>
+      <span class="mdi mdi-archive-sync brand-icon"></span>
       web-RSync
     </div>
 
