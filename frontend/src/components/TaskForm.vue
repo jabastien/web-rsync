@@ -19,6 +19,7 @@ interface FormData {
   include_patterns: string;
   schedule: string;
   enabled: boolean;
+  notify_enabled: boolean;
 }
 
 const props = defineProps<{
@@ -33,6 +34,7 @@ const form = reactive<FormData>({
   include_patterns: props.initial?.include_patterns ?? "",
   schedule: props.initial?.schedule ?? "",
   enabled: props.initial?.enabled ?? true,
+  notify_enabled: props.initial?.notify_enabled ?? true,
 });
 
 // ── Hosts + endpoint pickers ──────────────────────────────────────────────────
@@ -511,6 +513,13 @@ function submit() {
         <input type="checkbox" v-model="form.enabled" />
         Enabled
       </label>
+    </div>
+    <div class="form-group">
+      <label>
+        <input type="checkbox" v-model="form.notify_enabled" />
+        Enable notifications for this task
+      </label>
+      <div class="hint">When checked, configured notification channels fire on job completion.</div>
     </div>
     <button type="submit" class="btn-primary">
       <span class="mdi mdi-content-save"></span>Save

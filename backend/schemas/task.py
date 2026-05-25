@@ -12,6 +12,7 @@ class TaskBase(BaseModel):
     include_patterns: str = ""
     schedule: str | None = None
     enabled: bool = True
+    notify_enabled: bool = True
 
 
 class TaskCreate(TaskBase):
@@ -35,6 +36,7 @@ class TaskUpdate(BaseModel):
     include_patterns: str | None = None
     schedule: str | None = None
     enabled: bool | None = None
+    notify_enabled: bool | None = None
 
     @field_validator("schedule")
     @classmethod

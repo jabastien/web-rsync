@@ -16,8 +16,9 @@ const navItems = [
   { to: "/",        label: "Dashboard", icon: "mdi-view-dashboard-outline" },
   { to: "/tasks",   label: "Tasks",     icon: "mdi-sync"                   },
   { to: "/hosts",   label: "Hosts",     icon: "mdi-server-network"         },
-  { to: "/history", label: "History",   icon: "mdi-history"                },
-  { to: "/help",    label: "Help",      icon: "mdi-help-circle-outline"    },
+  { to: "/history",       label: "History",       icon: "mdi-history"                },
+  { to: "/notifications", label: "Notifications", icon: "mdi-bell-outline"           },
+  { to: "/help",          label: "Help",          icon: "mdi-help-circle-outline"    },
 ];
 </script>
 

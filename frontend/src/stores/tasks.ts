@@ -10,6 +10,7 @@ export interface Task {
   rsync_options: string;
   schedule: string | null;
   enabled: boolean;
+  notify_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

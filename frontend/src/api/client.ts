@@ -41,3 +41,12 @@ export const purgeJobRuns = () => api.delete("/job-runs");
 export const getHealth = () => api.get("/system/health");
 export const getSchedulerJobs = () => api.get("/system/scheduler-jobs");
 export const getMounts = () => api.get("/system/mounts");
+
+// ---- Notifications ----
+export const getNotificationChannels = () => api.get("/notifications");
+export const getNotificationChannel = (id: number) => api.get(`/notifications/${id}`);
+export const createNotificationChannel = (data: object) => api.post("/notifications", data);
+export const updateNotificationChannel = (id: number, data: object) =>
+  api.put(`/notifications/${id}`, data);
+export const deleteNotificationChannel = (id: number) => api.delete(`/notifications/${id}`);
+export const testNotificationChannel = (id: number) => api.post(`/notifications/${id}/test`);
