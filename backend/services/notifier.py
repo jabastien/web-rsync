@@ -28,20 +28,24 @@ def _build_apprise_url(provider: str, cfg: dict) -> str:
 
     if provider == "ntfy":
         server: str = cfg["url"].rstrip("/")
-        # strip scheme — Apprise's ntfy plugin adds its own
+        is_https = server.startswith("https://")
         server = server.removeprefix("https://").removeprefix("http://")
         topic = cfg["topic"]
         token = cfg.get("token", "")
         priority = cfg.get("priority", "default")
         auth = f"{token}@" if token else ""
-        return f"ntfys://{auth}{server}/{topic}?priority={priority}"
+        scheme = "ntfys" if is_https else "ntfy"
+        return f"{scheme}://{auth}{server}/{topic}?priority={priority}"
 
     if provider == "gotify":
         server: str = cfg["url"].rstrip("/")
+        # Apprise uses gotifys:// for HTTPS — preserve the original scheme
+        is_https = server.startswith("https://")
         server = server.removeprefix("https://").removeprefix("http://")
         token = cfg["token"]
         priority = cfg.get("priority", 5)
-        return f"gotify://{server}/{token}?priority={priority}"
+        scheme = "gotifys" if is_https else "gotify"
+        return f"{scheme}://{server}/{token}?priority={priority}"
 
     if provider == "discord":
         # Webhook URL: https://discord.com/api/webhooks/<id>/<token>
