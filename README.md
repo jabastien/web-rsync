@@ -26,6 +26,7 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 - SSH host management with automated public-key deployment
 - Cron scheduling with human-readable previews ([crontab.guru](https://crontab.guru/) linked)
 - Job run history with full per-run logs; **purge history** with confirmation
+- **Push notifications** on job completion — ntfy, Gotify, Discord, Telegram, any [Apprise-compatible service](https://github.com/caronc/apprise/wiki), or a generic webhook with a custom JSON body template
 - Confirmation modal on all destructive actions (delete task, delete host, purge history)
 - In-app **Help** page covering all features, path formats, and homelab rsync recipes
 - Version badge in sidebar; SPA deep-links (`/history/42`, `/tasks`, etc.) work on direct access / refresh
@@ -39,6 +40,7 @@ A web UI for managing rsync tasks — replacement for the unmaintained [websync]
 | Scheduling | APScheduler |
 | SSH | paramiko |
 | Log streaming | SSE via sse-starlette |
+| Notifications | [Apprise](https://github.com/caronc/apprise) + httpx |
 | Frontend | Vue 3 + Vite + TypeScript + Pinia + Vue Router |
 | Icons | Material Design Icons (`@mdi/font` 7.4) |
 | Deployment | Docker (multi-stage) |
@@ -505,6 +507,47 @@ Click any row in Job History to view its log. Running jobs stream live output vi
 
 ---
 
+### Notifications
+
+web-RSync can send push alerts on job completion to any channel you configure under **Notifications** in the sidebar.
+
+#### Supported providers
+
+| Provider | Type | Notes |
+|----------|------|-------|
+| **ntfy** | Self-hosted or ntfy.sh | Emoji tags (✅ / 🚨) shown as icons in ntfy clients; configurable priority |
+| **Gotify** | Self-hosted | App token auth; configurable priority (0–10) |
+| **Discord** | Webhook | Paste your Discord webhook URL — no bot required |
+| **Telegram** | Bot API | Requires a bot token and chat ID |
+| **Apprise URL** | 137+ services | Any URL supported by Apprise: Slack, Matrix, Pushover, Home Assistant, Rocket.Chat, Mattermost, and more — see the [Apprise wiki](https://github.com/caronc/apprise/wiki) for the full list and URL syntax for each service |
+| **Generic webhook** | Any HTTP endpoint | POST JSON to any URL; optional `{{title}}` / `{{message}}` template for the body |
+
+#### How it works
+
+- Channels are **global** — add one channel and it fires for all jobs (unless a task opts out).
+- Each channel independently controls **Notify on failure** (default on) and **Notify on success** (default off, to avoid noise).
+- Per-task opt-out: uncheck **Enable notifications for this task** in the task form to silence a specific task entirely.
+- Dry runs and previews never trigger notifications.
+- Dispatch is fire-and-forget — a slow or failing notification provider never delays job tracking or log streaming.
+
+#### Notification content
+
+Notifications include:
+
+- **Title:** `✅ rsync success: task-name` or `❌ rsync failed: task-name`
+- **Body:** job run ID, exit code (on failure), and duration — e.g. `Job #42 failed. 🔴 Exit code: 23  ⏱ Duration: 1m 4s`
+
+#### To add a channel
+
+1. Go to **Notifications → Add Channel**
+2. Choose a provider and fill in the required fields. For **ntfy**: server URL (e.g. `https://ntfy.sh`), topic, and optionally a bearer token for auth-protected servers. For **Apprise URL**: paste any Apprise-formatted URL — see the [Apprise wiki](https://github.com/caronc/apprise/wiki) for syntax per service.
+3. Click **Test** to send a test notification immediately and verify the channel works.
+4. Save.
+
+> **HTTPS matters.** ntfy and Gotify channels auto-detect the scheme from your server URL — `https://` servers use Apprise's `ntfys://` / `gotifys://` internally. Using a plain `http://` URL with an HTTPS-only server will fail with a 401.
+
+---
+
 ## API Reference
 
 Full interactive docs available at `http://localhost:8000/docs` (Swagger UI).
@@ -535,3 +578,9 @@ Full interactive docs available at `http://localhost:8000/docs` (Swagger UI).
 | GET | `/api/job-runs/{id}/log` | Get full log text |
 | GET | `/api/job-runs/{id}/stream` | SSE live log stream |
 | DELETE | `/api/job-runs` | Purge all completed runs and log files |
+| GET | `/api/notifications` | List notification channels |
+| POST | `/api/notifications` | Create channel |
+| GET | `/api/notifications/{id}` | Get channel |
+| PUT | `/api/notifications/{id}` | Update channel |
+| DELETE | `/api/notifications/{id}` | Delete channel |
+| POST | `/api/notifications/{id}/test` | Send a test notification (returns 502 on delivery failure) |
