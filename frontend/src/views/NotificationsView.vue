@@ -407,8 +407,8 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
 }
 
 .card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -431,12 +431,12 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
   padding: 8px 10px;
   color: var(--text-muted);
   font-weight: 600;
-  border-bottom: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .data-table td {
   padding: 10px;
-  border-bottom: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 
@@ -468,13 +468,13 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
   transition: color 0.12s, background 0.12s;
 }
 
-.btn-icon:hover { background: var(--hover-bg); color: var(--text); }
+.btn-icon:hover { background: var(--row-hover); color: var(--text); }
 .btn-icon.danger:hover { color: var(--danger); }
 .btn-icon:disabled { opacity: 0.5; cursor: default; }
 
-.text-success { color: var(--success, #22c55e); }
+.text-success { color: var(--badge-success-text); }
 .text-muted   { color: var(--text-muted); }
-.text-danger  { color: var(--danger, #ef4444); }
+.text-danger  { color: var(--danger-btn); }
 
 .empty-state {
   text-align: center;
@@ -517,8 +517,8 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
 .form-group input,
 .form-group select,
 .form-group textarea {
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
+  background: var(--surface-alt);
+  border: 1px solid var(--border-input);
   border-radius: 5px;
   color: var(--text);
   padding: 7px 10px;
@@ -557,7 +557,7 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
 }
 
 .error-msg {
-  color: var(--danger, #ef4444);
+  color: var(--danger-btn);
   font-size: 13px;
   background: rgba(239,68,68,0.08);
   border-radius: 5px;
@@ -588,9 +588,9 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
 .btn-primary:hover { opacity: 0.88; }
 
 .btn-secondary {
-  background: var(--card-bg);
+  background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--card-border);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 16px;
   font-size: 13px;
@@ -598,7 +598,7 @@ const NTFY_PRIORITIES = ["min", "low", "default", "high", "urgent"];
   cursor: pointer;
 }
 
-.btn-secondary:hover { background: var(--hover-bg); }
+.btn-secondary:hover { background: var(--row-hover); }
 
 @media (max-width: 600px) {
   .form-row { grid-template-columns: 1fr; }
