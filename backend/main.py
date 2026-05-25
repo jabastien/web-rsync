@@ -11,12 +11,13 @@ from sqlalchemy import text
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .routers import hosts, job_runs, system, tasks
+from .routers import hosts, job_runs, notifications, system, tasks
 from .services import rsync_runner, scheduler as sched_svc
 from .services.ssh_manager import ensure_ssh_key, ensure_ssh_agent, stop_ssh_agent
 from .models import task as _task_model  # noqa: F401 — ensure models are registered
 from .models import host as _host_model  # noqa: F401
 from .models import job_run as _job_run_model  # noqa: F401
+from .models import notification as _notification_model  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,6 +39,12 @@ async def lifespan(app: FastAPI):
                 conn.commit()
             except Exception:
                 pass  # column already exists
+
+        try:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN notify_enabled BOOLEAN NOT NULL DEFAULT 1"))
+            conn.commit()
+        except Exception:
+            pass  # column already exists
 
     db = SessionLocal()
     try:
@@ -78,6 +85,7 @@ app.include_router(tasks.router)
 app.include_router(hosts.router)
 app.include_router(job_runs.router)
 app.include_router(system.router)
+app.include_router(notifications.router)
 
 # Serve Vue frontend in production (built files at /app/static)
 static_dir = Path(__file__).parent / "static"

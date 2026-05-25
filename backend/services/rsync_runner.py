@@ -182,6 +182,7 @@ async def _execute(cmd: list[str], log_path: Path, run_id: int) -> int:
         with open(log_path, "a") as log_file:
             log_file.write(f"\n[ERROR] {e}\n")
 
+    notify_args: tuple | None = None
     db: Session = SessionLocal()
     try:
         job_run = db.get(JobRun, run_id)
@@ -190,8 +191,14 @@ async def _execute(cmd: list[str], log_path: Path, run_id: int) -> int:
             job_run.exit_code = exit_code
             job_run.status = "success" if exit_code == 0 else "failed"
             db.commit()
+            if job_run.task_id is not None and job_run.trigger not in ("dry_run", "preview"):
+                notify_args = (job_run.task_id, run_id, job_run.status)
     finally:
         db.close()
+
+    if notify_args:
+        from .notifier import dispatch_job_result  # lazy import avoids circular at module level
+        asyncio.create_task(dispatch_job_result(*notify_args))
 
     return exit_code
 
