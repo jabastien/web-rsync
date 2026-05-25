@@ -5,7 +5,6 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
 
 import apprise
 import httpx
@@ -20,8 +19,14 @@ _HTTP_TIMEOUT = httpx.Timeout(10.0)
 
 VALID_PROVIDERS = {"ntfy", "gotify", "discord", "telegram", "apprise", "webhook"}
 
+# ntfy emoji tag names (shown as icons in ntfy clients)
+_NTFY_TAGS = {
+    "success": "white_check_mark",
+    "failed":  "rotating_light",
+}
 
-def _build_apprise_url(provider: str, cfg: dict) -> str:
+
+def _build_apprise_url(provider: str, cfg: dict, status: str = "") -> str:
     """Construct an Apprise URL from provider name + config dict."""
     if provider == "apprise":
         return cfg["apprise_url"]
@@ -35,7 +40,8 @@ def _build_apprise_url(provider: str, cfg: dict) -> str:
         priority = cfg.get("priority", "default")
         auth = f"{token}@" if token else ""
         scheme = "ntfys" if is_https else "ntfy"
-        return f"{scheme}://{auth}{server}/{topic}?priority={priority}"
+        tag = _NTFY_TAGS.get(status, "bell")
+        return f"{scheme}://{auth}{server}/{topic}?priority={priority}&tags={tag}"
 
     if provider == "gotify":
         server: str = cfg["url"].rstrip("/")
@@ -63,6 +69,33 @@ def _build_apprise_url(provider: str, cfg: dict) -> str:
     raise ValueError(f"Unknown provider for Apprise URL build: {provider}")
 
 
+def _format_duration(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds}s"
+    m, s = divmod(seconds, 60)
+    return f"{m}m {s}s" if s else f"{m}m"
+
+
+def _build_message(status: str, run_id: int, task_name: str,
+                   exit_code: int | None, duration: int | None) -> tuple[str, str]:
+    """Return (title, message) with emoji appropriate to the status."""
+    if status == "success":
+        icon = "✅"
+        title = f"{icon} rsync success: {task_name}"
+        lines = [f"Job #{run_id} completed successfully."]
+    else:
+        icon = "❌"
+        title = f"{icon} rsync failed: {task_name}"
+        lines = [f"Job #{run_id} failed."]
+        if exit_code is not None:
+            lines.append(f"🔴 Exit code: {exit_code}")
+
+    if duration is not None:
+        lines.append(f"⏱ Duration: {_format_duration(duration)}")
+
+    return title, "  ".join(lines)
+
+
 async def _send_via_apprise(apprise_url: str, title: str, message: str) -> None:
     ap = apprise.Apprise()
     ap.add(apprise_url)
@@ -85,23 +118,21 @@ async def _send_webhook(cfg: dict, title: str, message: str) -> None:
         r.raise_for_status()
 
 
-async def _dispatch_channel(channel: NotificationChannel, title: str, message: str) -> None:
+async def _dispatch_channel(
+    channel: NotificationChannel, title: str, message: str, status: str
+) -> None:
     """Send to one channel; log and swallow all exceptions so callers are never disrupted."""
     try:
         cfg = json.loads(channel.config)
         if channel.provider == "webhook":
             await _send_webhook(cfg, title, message)
         else:
-            apprise_url = _build_apprise_url(channel.provider, cfg)
-            await _send_apprise(apprise_url, title, message)
+            apprise_url = _build_apprise_url(channel.provider, cfg, status)
+            await _send_via_apprise(apprise_url, title, message)
     except Exception:
         logger.exception(
             "Notification failed for channel %d (%s)", channel.id, channel.provider
         )
-
-
-# alias used internally — keeps the public name clean
-_send_apprise = _send_via_apprise
 
 
 async def dispatch_job_result(task_id: int, run_id: int, status: str) -> None:
@@ -109,11 +140,21 @@ async def dispatch_job_result(task_id: int, run_id: int, status: str) -> None:
     Called after a job run completes. Loads enabled channels from a fresh DB
     session and fires per-channel tasks. Fire-and-forget — called via create_task().
     """
+    from ..models.job_run import JobRun  # avoid circular at module level
+
     db = SessionLocal()
     try:
         task = db.get(Task, task_id)
         if task is None or not task.notify_enabled:
             return
+
+        job_run = db.get(JobRun, run_id)
+        exit_code: int | None = job_run.exit_code if job_run else None
+        duration: int | None = None
+        if job_run and job_run.finished_at and job_run.started_at:
+            delta = job_run.finished_at - job_run.started_at
+            duration = max(0, int(delta.total_seconds()))
+
         channels = (
             db.query(NotificationChannel)
             .filter(NotificationChannel.enabled == True)  # noqa: E712
@@ -131,12 +172,10 @@ async def dispatch_job_result(task_id: int, run_id: int, status: str) -> None:
     if not relevant:
         return
 
-    icon = "✅" if status == "success" else "❌"
-    title = f"{icon} rsync {status}: {task_name}"
-    message = f"Job run #{run_id} for task '{task_name}' finished with status: {status}."
+    title, message = _build_message(status, run_id, task_name, exit_code, duration)
 
     for ch in relevant:
-        asyncio.create_task(_dispatch_channel(ch, title, message))
+        asyncio.create_task(_dispatch_channel(ch, title, message, status))
 
 
 async def send_test(channel: NotificationChannel) -> None:
@@ -144,9 +183,11 @@ async def send_test(channel: NotificationChannel) -> None:
     Awaited directly by the test endpoint — NOT fire-and-forget.
     Raises on failure so the HTTP response can carry the error.
     """
+    title = "🔔 web-RSync Test"
+    message = "✅ Test notification from web-RSync — your channel is working."
     cfg = json.loads(channel.config)
     if channel.provider == "webhook":
-        await _send_webhook(cfg, "web-RSync Test", "This is a test notification from web-RSync.")
+        await _send_webhook(cfg, title, message)
     else:
-        apprise_url = _build_apprise_url(channel.provider, cfg)
-        await _send_via_apprise(apprise_url, "web-RSync Test", "This is a test notification from web-RSync.")
+        apprise_url = _build_apprise_url(channel.provider, cfg, "success")
+        await _send_via_apprise(apprise_url, title, message)
