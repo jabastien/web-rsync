@@ -103,6 +103,7 @@ sqlite3 data/web_rsync.db
 - **Phase 11** — Ed25519 SSH keys (replaced RSA-4096); legacy `id_rsa` detection with startup warning
 - **Phase 12** — Dark mode (default, user-switchable), Material Design Icons, mobile-friendly layout (hamburger + slide-in sidebar)
 - **Phase 13** — Host pickers in task form (split host dropdown + path input); mount points panel (`GET /api/system/mounts`) with click-to-copy
+- **Phase 14** — Push notifications: global channels (ntfy, Gotify, Discord, Telegram, Apprise URL, generic webhook); per-task opt-out; fire-and-forget dispatch; emoji tags; test endpoint
 
 ## Related Documents
 

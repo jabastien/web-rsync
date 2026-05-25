@@ -100,6 +100,7 @@ services:
 - Searchable rsync flag reference panel (~60 flags)
 - Exclude / include pattern editor (per-task `--exclude-from` / `--include-from`)
 - Job history with full per-run logs and purge-all option
+- **Push notifications** on job completion — ntfy, Gotify, Discord, Telegram, any [Apprise-compatible service](https://github.com/caronc/apprise/wiki), or a generic webhook
 - Dark mode by default (user-switchable), mobile-friendly layout
 - Full Swagger UI at `http://localhost:8000/docs`
 
